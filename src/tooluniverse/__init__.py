@@ -162,6 +162,7 @@ ComposeTool: Any
 CellosaurusSearchTool: Any
 CellosaurusQueryConverterTool: Any
 CellosaurusGetCellLineInfoTool: Any
+TextEmbeddingTool: Any
 if not LAZY_LOADING_ENABLED:
     # Import all tool classes immediately (old behavior) with warning suppression  # noqa: E501
     with warnings.catch_warnings():
@@ -226,6 +227,7 @@ if not LAZY_LOADING_ENABLED:
             GWASSNPsForGene,
             GWASAssociationsForStudy,
         )
+        from .text_embedding_tool import TextEmbeddingTool
 
     from .mcp_client_tool import MCPClientTool, MCPAutoLoaderTool
     from .admetai_tool import ADMETAITool
@@ -358,6 +360,7 @@ else:
     CoreTool = _LazyImportProxy("core_tool", "CoreTool")
     PMCTool = _LazyImportProxy("pmc_tool", "PMCTool")
     ZenodoTool = _LazyImportProxy("zenodo_tool", "ZenodoTool")
+    TextEmbeddingTool = _LazyImportProxy("text_embedding_tool", "TextEmbeddingTool")
 
 __all__ = [
     "__version__",
@@ -446,4 +449,5 @@ __all__ = [
     "CoreTool",
     "PMCTool",
     "ZenodoTool",
+    "TextEmbeddingTool",
 ]
