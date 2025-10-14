@@ -17,7 +17,6 @@ class TextEmbeddingTool(BaseTool):
             api_key=os.getenv("AZURE_OPENAI_API_KEY"),
             api_version="2024-10-21",
         )
-        print("ToolConfig for TextEmbeddingTool:", tool_config)
         self.model = tool_config.get("model", "text-embedding-3-large")
 
     def validate_input(self, **kwargs):
