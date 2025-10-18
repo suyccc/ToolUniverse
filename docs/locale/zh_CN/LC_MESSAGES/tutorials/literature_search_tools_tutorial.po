@@ -126,6 +126,9 @@ msgstr "ArXiv_search_论文"
 #: cf1c54c8e9234acb8c187d3e540eac93
 msgid "ArXiv"
 msgstr ""
+"ArXiv\n"
+"\n"
+"上下文：文档"
 
 #: ../../tutorials/literature_search_tools_tutorial.rst:38
 #: 5010af4864ce4972a3592d3803c1ffbd
@@ -810,7 +813,7 @@ msgstr ""
 #: ../../tutorials/literature_search_tools_tutorial.rst:668
 #: 29da1197bdac480c9362695364b5cec5
 msgid "max_results"
-msgstr ""
+msgstr "最大结果数量"
 
 #: ../../tutorials/literature_search_tools_tutorial.rst:668
 #: cc21dc6323664eedabe5fa988ee403e8
@@ -835,7 +838,7 @@ msgstr "相关性"
 #: ../../tutorials/literature_search_tools_tutorial.rst:673
 #: dfd0f8576c3f466089a5d8efb379c313
 msgid "sort_order"
-msgstr ""
+msgstr "排序顺序"
 
 #: ../../tutorials/literature_search_tools_tutorial.rst:673
 #: 6caca1ec46224092be3d1b9679f96824
@@ -865,7 +868,7 @@ msgstr "type: 期刊-文章"
 #: ../../tutorials/literature_search_tools_tutorial.rst:678
 #: 14a93928c39f470687de01993285f869
 msgid "year_from"
-msgstr ""
+msgstr "年份_起"
 
 #: ../../tutorials/literature_search_tools_tutorial.rst:678
 #: 7d09e2f552ee412a8047238be6623901
@@ -895,7 +898,7 @@ msgstr ""
 #: ../../tutorials/literature_search_tools_tutorial.rst:682
 #: 6331788e5c91461e854a43ccf9a3b474
 msgid "open_access"
-msgstr ""
+msgstr "开放访问"
 
 #: ../../tutorials/literature_search_tools_tutorial.rst:682
 #: 5a6fd453db084f858f59ae904b3a328e

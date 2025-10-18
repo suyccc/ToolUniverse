@@ -6,6 +6,9 @@ This module tests that run_one_function parameters (stream_callback, use_cache, 
 are correctly passed to tool instances.
 """
 
+import json
+import threading
+
 import pytest
 from unittest.mock import Mock, MagicMock
 from tooluniverse import ToolUniverse
@@ -43,6 +46,7 @@ class TestRunParameterPassing:
             "name": "test_tool",
             "type": "MockTool",
             "description": "Test tool",
+            "cacheable": False,
             "parameter": {
                 "type": "object",
                 "properties": {
@@ -88,6 +92,7 @@ class TestRunParameterPassing:
             "name": "old_tool",
             "type": "OldStyleTool",
             "description": "Old style tool",
+            "cacheable": False,
             "parameter": {"type": "object", "properties": {}}
         }
         
@@ -124,6 +129,7 @@ class TestRunParameterPassing:
             "name": "partial_tool",
             "type": "PartialTool",
             "description": "Partial tool",
+            "cacheable": False,
             "parameter": {"type": "object", "properties": {}}
         }
         
@@ -163,6 +169,7 @@ class TestRunParameterPassing:
             "name": "cache_tool",
             "type": "CacheAwareTool",
             "description": "Cache aware tool",
+            "cacheable": False,
             "parameter": {"type": "object", "properties": {}}
         }
         
@@ -205,6 +212,7 @@ class TestRunParameterPassing:
             "name": "validate_tool",
             "type": "ValidationAwareTool",
             "description": "Validation aware tool",
+            "cacheable": False,
             "parameter": {"type": "object", "properties": {}}
         }
         
@@ -227,6 +235,58 @@ class TestRunParameterPassing:
         )
         assert tool_instance.validation_status is False
         assert "warning" in result2
+
+    def test_run_batch_parallel_preserves_order_and_cache_flag(self):
+        """run() should support batched inputs and expose cache toggles."""
+
+        class RecordingBatchTool(BaseTool):
+            def __init__(self, tool_config):
+                super().__init__(tool_config)
+                self.use_cache_values = []
+                self.lock = threading.Lock()
+
+            def run(self, arguments=None, use_cache=False, **kwargs):
+                with self.lock:
+                    self.use_cache_values.append(use_cache)
+                return {"value": arguments["value"]}
+
+        tool_config = {
+            "name": "batch_tool",
+            "type": "RecordingBatchTool",
+            "description": "Batch capable tool",
+            "cacheable": False,
+            "parameter": {
+                "type": "object",
+                "properties": {"value": {"type": "integer"}},
+                "required": ["value"],
+            },
+        }
+
+        tool_instance = RecordingBatchTool(tool_config)
+        self.tu.callable_functions["batch_tool"] = tool_instance
+        self.tu.all_tool_dict["batch_tool"] = tool_config
+
+        function_calls = [
+            {"name": "batch_tool", "arguments": {"value": i}} for i in range(10)
+        ]
+
+        messages = self.tu.run(
+            function_calls,
+            use_cache=True,
+            max_workers=4,
+        )
+
+        assert messages[0]["role"] == "assistant"
+
+        tool_messages = [msg for msg in messages[1:] if msg["role"] == "tool"]
+        assert len(tool_messages) == len(function_calls)
+
+        observed_values = [
+            json.loads(msg["content"])["content"]["value"] for msg in tool_messages
+        ]
+        assert observed_values == list(range(10))
+
+        assert tool_instance.use_cache_values == [True] * len(function_calls)
 
 
 class TestDynamicAPIParameterPassing:
@@ -256,6 +316,7 @@ class TestDynamicAPIParameterPassing:
             "name": "dynamic_test",
             "type": "DynamicTool",
             "description": "Dynamic test tool",
+            "cacheable": False,
             "parameter": {"type": "object", "properties": {}}
         }
         
@@ -280,4 +341,3 @@ class TestDynamicAPIParameterPassing:
 
 if __name__ == "__main__":
     pytest.main([__file__, "-v"])
-

@@ -318,9 +318,10 @@ class TestMCPProtocol:
             timeout=60  # Increased timeout to 60 seconds
         )
         
-        # Should succeed and show categories
+        # Should succeed and show categories summary (new format)
         assert result.returncode == 0
-        assert "uniprot" in result.stdout or "ChEMBL" in result.stdout
+        assert "Available tool categories" in result.stdout
+        assert "Total categories:" in result.stdout or "Total unique tools:" in result.stdout
 
     def test_mcp_server_list_tools(self):
         """Test MCP server list tools command works"""

@@ -135,7 +135,7 @@ msgstr "使用大型语言模型（LLM）进行上下文感知翻译"
 #: ../../translation_tools/AGENTIC_TRANSLATION_TOOL_SUMMARY.md:31
 #: aae5bf999a1c480d9d29f4d0a154355b
 msgid "保持技术术语一致性"
-msgstr ""
+msgstr "保持技术术语的一致性"
 
 #: ../../translation_tools/AGENTIC_TRANSLATION_TOOL_SUMMARY.md:32
 #: d0722b7208b14b879320608bfc7e8bc1
@@ -281,7 +281,7 @@ msgstr ""
 #: ../../translation_tools/AGENTIC_TRANSLATION_TOOL_SUMMARY.md:130
 #: 0794dfe33f96416b8ad5ebedbb733637
 msgid "✅ 单个文本翻译正常工作"
-msgstr ""
+msgstr "✅ 单个文本翻译正常运行"
 
 #: ../../translation_tools/AGENTIC_TRANSLATION_TOOL_SUMMARY.md:131
 #: 0de720e13a5e4f3487e0d7849cadbeab

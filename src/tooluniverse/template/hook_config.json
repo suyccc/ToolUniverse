@@ -11,26 +11,6 @@
       "default_chunk_size": 96000,
       "default_focus_areas": "key_findings_and_results",
       "default_max_summary_length": 3000
-    },
-    "FilteringHook": {
-      "default_replacement_text": "[REDACTED]",
-      "default_preserve_structure": true,
-      "default_log_filtered_items": false
-    },
-    "FormattingHook": {
-      "default_indent_size": 2,
-      "default_sort_keys": true,
-      "default_pretty_print": true,
-      "default_max_line_length": 100
-    },
-    "ValidationHook": {
-      "default_strict_mode": false,
-      "default_error_action": "warn"
-    },
-    "LoggingHook": {
-      "default_log_level": "INFO",
-      "default_log_format": "simple",
-      "default_max_log_size": 1000
     }
   },
   "hooks": [

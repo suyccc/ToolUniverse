@@ -38,7 +38,7 @@ msgstr "`quick_doc_build.sh`（中文版）"
 
 #: ../../SUMMARY.md:8 7de56f96c4ae493791e46ffebaee1358
 msgid "✅ **默认构建中英文**：`DOC_LANGUAGES=\"en,zh_CN\"`"
-msgstr ""
+msgstr "✅ **Default 构建中英文**：`DOC_LANGUAGES=\"en,zh_CN\"`"
 
 #: ../../SUMMARY.md:9 3b3c453544b249c5a0168c74b535caf8
 msgid "✅ 自动更新翻译文件"
@@ -317,7 +317,7 @@ msgstr "之后 (现在)"
 
 #: ../../SUMMARY.md:263 81185fccfe2d4a0fa29fc87e852b90ed
 msgid "📝 翻译工作流"
-msgstr ""
+msgstr "📝 翻译工作流程"
 
 #: ../../SUMMARY.md:265 3818a665970542e79eea80ced1e19470
 msgid "1. 构建（自动更新翻译）"
@@ -437,7 +437,7 @@ msgstr ""
 
 #: ../../SUMMARY.md:317 f26c249c72b542778e988787d7aab991
 msgid "✅ `locale/zh_CN/LC_MESSAGES/*.po` - 翻译文件"
-msgstr ""
+msgstr "✅ `locale/zh_CN/LC_MESSAGES/*.po` - Translation 文件"
 
 #: ../../SUMMARY.md:319 291726ddfc464e709daa7fc67e689a5a
 msgid "静态资源"

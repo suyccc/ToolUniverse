@@ -13,13 +13,11 @@
       "properties": {
         "user_query": {
           "type": "string",
-          "description": "The research query to analyze",
-          "required": true
+          "description": "The research query to analyze"
         },
         "context": {
           "type": "string",
           "description": "Context information from previous steps",
-          "required": false,
           "default": ""
         }
       },
@@ -51,23 +49,19 @@
       "properties": {
         "plan_title": {
           "type": "string",
-          "description": "The title of the search plan",
-          "required": true
+          "description": "The title of the search plan"
         },
         "plan_description": {
           "type": "string",
-          "description": "The description of the search plan",
-          "required": true
+          "description": "The description of the search plan"
         },
         "current_keywords": {
           "type": "string",
-          "description": "Current keywords for the plan (comma-separated)",
-          "required": true
+          "description": "Current keywords for the plan (comma-separated)"
         },
         "context": {
           "type": "string",
           "description": "Context information from previous steps",
-          "required": false,
           "default": ""
         }
       },
@@ -102,28 +96,23 @@
       "properties": {
         "plan_title": {
           "type": "string",
-          "description": "The title of the search plan",
-          "required": true
+          "description": "The title of the search plan"
         },
         "plan_description": {
           "type": "string",
-          "description": "The description of the search plan",
-          "required": true
+          "description": "The description of the search plan"
         },
         "paper_count": {
           "type": "string",
-          "description": "Number of papers found",
-          "required": true
+          "description": "Number of papers found"
         },
         "papers_text": {
           "type": "string",
-          "description": "Formatted text of the papers to summarize",
-          "required": true
+          "description": "Formatted text of the papers to summarize"
         },
         "context": {
           "type": "string",
           "description": "Context information from previous steps",
-          "required": false,
           "default": ""
         }
       },
@@ -156,13 +145,11 @@
       "properties": {
         "plans_analysis": {
           "type": "string",
-          "description": "Analysis of current search plans and their quality scores",
-          "required": true
+          "description": "Analysis of current search plans and their quality scores"
         },
         "context": {
           "type": "string",
           "description": "Context information from previous steps",
-          "required": false,
           "default": ""
         }
       },
@@ -197,38 +184,31 @@
       "properties": {
         "user_query": {
           "type": "string",
-          "description": "The original research query",
-          "required": true
+          "description": "The original research query"
         },
         "user_intent": {
           "type": "string",
-          "description": "The analyzed user intent",
-          "required": true
+          "description": "The analyzed user intent"
         },
         "total_papers": {
           "type": "string",
-          "description": "Total number of papers found",
-          "required": true
+          "description": "Total number of papers found"
         },
         "total_plans": {
           "type": "string",
-          "description": "Total number of search plans executed",
-          "required": true
+          "description": "Total number of search plans executed"
         },
         "iterations": {
           "type": "string",
-          "description": "Number of iterations performed",
-          "required": true
+          "description": "Number of iterations performed"
         },
         "plan_summaries": {
           "type": "string",
-          "description": "Summaries of all search plans",
-          "required": true
+          "description": "Summaries of all search plans"
         },
         "context": {
           "type": "string",
           "description": "Context information from previous steps",
-          "required": false,
           "default": ""
         }
       },

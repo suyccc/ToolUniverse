@@ -355,9 +355,9 @@ class TestDiscoveredBugs(unittest.TestCase):
         # Verify cache is empty
         self.assertEqual(len(self.tu._cache), 0)
         
-        # Test cache operations
-        self.tu._cache["test"] = "value"
-        self.assertEqual(self.tu._cache["test"], "value")
+        # Test cache operations using proper API
+        self.tu._cache.set("test", "value")
+        self.assertEqual(self.tu._cache.get("test"), "value")
         
         self.tu.clear_cache()
         self.assertEqual(len(self.tu._cache), 0)

@@ -104,13 +104,39 @@ class ToolUniverseLogger:
 
         self._logger.setLevel(level)
 
-        # Create console handler
-        handler = logging.StreamHandler(sys.stdout)
+        # Create console handler - use stderr for stdio mode
+        output_stream = (
+            sys.stderr if os.getenv("TOOLUNIVERSE_STDIO_MODE") == "1" else sys.stdout
+        )
+        handler = logging.StreamHandler(output_stream)
         handler.setLevel(level)
 
         # Create formatter
         formatter = ToolUniverseFormatter(
             fmt="%(message)s",  # Simple format since we add emoji prefix
+            datefmt="%H:%M:%S",
+        )
+        handler.setFormatter(formatter)
+
+        # Add handler to logger
+        self._logger.addHandler(handler)
+
+    def reconfigure_for_stdio(self):
+        """Reconfigure logger to output to stderr for stdio mode"""
+        # Remove existing handlers
+        for handler in self._logger.handlers[:]:
+            self._logger.removeHandler(handler)
+
+        # Get current level
+        level = self._logger.level
+
+        # Create new handler with stderr
+        handler = logging.StreamHandler(sys.stderr)
+        handler.setLevel(level)
+
+        # Create formatter
+        formatter = ToolUniverseFormatter(
+            fmt="%(message)s",
             datefmt="%H:%M:%S",
         )
         handler.setFormatter(formatter)
@@ -150,6 +176,42 @@ class ToolUniverseLogger:
 
 # Global logger instance
 _logger_manager = ToolUniverseLogger()
+
+
+def reconfigure_for_stdio() -> None:
+    """
+    Reconfigure logging to output to stderr for stdio mode.
+
+    This function should be called at the very beginning of stdio mode
+    to ensure all logs go to stderr instead of stdout.
+    """
+    _logger_manager.reconfigure_for_stdio()
+    # Ensure third-party rich/traceback pretty outputs do not go to stdout
+    try:
+        import rich
+        from rich.console import Console
+
+        # Redirect rich default console to stderr in stdio mode
+        rich_console = Console(
+            file=sys.stderr,
+            force_terminal=False,
+            markup=False,
+            highlight=False,
+            emoji=False,
+            soft_wrap=False,
+        )
+        rich.get_console = lambda: rich_console
+    except Exception:
+        pass
+    # Force Python warnings and tracebacks to stderr
+    try:
+        import warnings
+
+        warnings.showwarning = lambda *args, **kwargs: print(
+            warnings.formatwarning(*args, **kwargs), file=sys.stderr
+        )
+    except Exception:
+        pass
 
 
 def setup_logging(level: Optional[str] = None) -> None:

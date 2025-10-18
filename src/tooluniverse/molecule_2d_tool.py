@@ -9,6 +9,7 @@ Supports SMILES, InChI, molecule names, and various output formats.
 import base64
 import requests
 import io
+import warnings
 from typing import Any, Dict, Optional
 from .visualization_tool import VisualizationTool
 from .tool_registry import register_tool
@@ -21,9 +22,14 @@ class Molecule2DTool(VisualizationTool):
     def run(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Generate 2D molecular structure visualization."""
         try:
-            from rdkit import Chem
-            from rdkit.Chem import Draw
-            from rdkit.Chem import rdDepictor
+            # Suppress RDKit RuntimeWarnings about converter registration
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=RuntimeWarning, module="importlib._bootstrap"
+                )
+                from rdkit import Chem
+                from rdkit.Chem import Draw
+                from rdkit.Chem import rdDepictor
 
             # Extract parameters
             smiles = arguments.get("smiles")

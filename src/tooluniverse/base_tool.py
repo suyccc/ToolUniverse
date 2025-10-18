@@ -13,11 +13,15 @@ import json
 from pathlib import Path
 from typing import no_type_check, Optional, Dict, Any
 import hashlib
+import inspect
 
 
 class BaseTool:
+    STATIC_CACHE_VERSION = "1"
+
     def __init__(self, tool_config):
         self.tool_config = self._apply_defaults(tool_config)
+        self._cached_version_hash: Optional[str] = None
 
     @classmethod
     def get_default_config_file(cls):
@@ -285,6 +289,49 @@ class BaseTool:
             True if tool results can be cached, False otherwise
         """
         return self.tool_config.get("cacheable", True)
+
+    def get_batch_concurrency_limit(self) -> int:
+        """Return maximum concurrent executions allowed during batch runs (0 = unlimited)."""
+        limit = self.tool_config.get("batch_max_concurrency")
+        if limit is None:
+            return 0
+        try:
+            parsed = int(limit)
+        except (TypeError, ValueError):
+            return 0
+        return max(0, parsed)
+
+    def get_cache_namespace(self) -> str:
+        """Return cache namespace identifier for this tool."""
+        return self.tool_config.get("name", self.__class__.__name__)
+
+    def get_cache_version(self) -> str:
+        """Return a stable cache version fingerprint for this tool."""
+        if self._cached_version_hash:
+            return self._cached_version_hash
+
+        hasher = hashlib.sha256()
+        hasher.update(self.STATIC_CACHE_VERSION.encode("utf-8"))
+
+        try:
+            source = inspect.getsource(self.__class__)
+            hasher.update(source.encode("utf-8"))
+        except (OSError, TypeError):
+            pass
+
+        try:
+            schema = json.dumps(self.tool_config.get("parameter", {}), sort_keys=True)
+            hasher.update(schema.encode("utf-8"))
+        except (TypeError, ValueError):
+            pass
+
+        self._cached_version_hash = hasher.hexdigest()[:16]
+        return self._cached_version_hash
+
+    def get_cache_ttl(self, result: Any = None) -> Optional[int]:
+        """Return TTL (seconds) for cached results; None means no expiration."""
+        ttl = self.tool_config.get("cache_ttl")
+        return int(ttl) if ttl is not None else None
 
     def get_tool_info(self) -> Dict[str, Any]:
         """

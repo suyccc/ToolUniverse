@@ -314,59 +314,5 @@
     ],
     "composition_file": "tool_graph_generation.py",
     "composition_function": "compose"
-  },
-  {
-    "type": "ComposeTool",
-    "name": "MultiAgentLiteratureSearch",
-    "description": "Multi-agent literature search system that uses AI agents to analyze intent, extract keywords, execute parallel searches, summarize results, and check quality iteratively",
-    "parameter": {
-      "type": "object",
-      "properties": {
-        "query": {
-          "type": "string",
-          "description": "The research query to search for"
-        },
-        "max_iterations": {
-          "type": "integer",
-          "description": "Maximum number of iterations (default: 3)",
-          "default": 3
-        },
-        "quality_threshold": {
-          "type": "number",
-          "description": "Quality threshold for completion (default: 0.7)",
-          "default": 0.7
-        }
-      },
-      "required": [
-        "query",
-        "max_iterations",
-        "quality_threshold"
-      ]
-    },
-    "auto_load_dependencies": true,
-    "fail_on_missing_tools": false,
-    "required_tools": [
-      "IntentAnalyzerAgent",
-      "KeywordExtractorAgent",
-      "ResultSummarizerAgent",
-      "QualityCheckerAgent",
-      "OverallSummaryAgent",
-      "ArXiv_search_papers",
-      "BioRxiv_search_preprints",
-      "MedRxiv_search_preprints",
-      "HAL_search_archive",
-      "Crossref_search_works",
-      "PubMed_search_articles",
-      "EuropePMC_search_articles",
-      "SemanticScholar_search_papers",
-      "openalex_literature_search",
-      "DBLP_search_publications",
-      "DOAJ_search_articles",
-      "CORE_search_papers",
-      "PMC_search_papers",
-      "Zenodo_search_records"
-    ],
-    "composition_file": "multi_agent_literature_search.py",
-    "composition_function": "compose"
   }
 ]

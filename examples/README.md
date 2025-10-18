@@ -6,66 +6,109 @@ This directory contains professional scientific research examples demonstrating 
 
 The examples showcase how to use `tooluniverse.tools` direct imports to build comprehensive scientific research workflows with proper data flow and scientific rigor.
 
-## Available Examples
+## Professional Workflow Examples
 
-### 1. Scientific Research Example (`scientific_research_example.py`)
+All workflows are located in the `examples/workflows/` directory and demonstrate professional scientific research methodologies with direct tool usage.
 
-A comprehensive example demonstrating three key scientific research workflows:
+### 1. Drug Discovery Workflow (`workflows/drug_discovery.py`)
 
-#### Drug Discovery Workflow
-- **Purpose**: Complete drug discovery pipeline for precision medicine
+**Complete drug discovery pipeline with target ranking and mechanism analysis**
+
+- **Purpose**: Professional drug discovery for precision medicine
 - **Key Features**:
-  - Disease target identification using OpenTargets
+  - Disease target identification and ranking using OpenTargets
   - Drug similarity search using ChEMBL
-  - ADMET property prediction
-  - Clinical evidence synthesis
-  - FDA drug comparison
+  - Comprehensive ADMET property prediction with composite scoring
+  - Drug mechanism analysis and target overlap calculation
+  - Clinical evidence synthesis and literature support
+  - Structured output with scientific metrics
 - **Example**: Type 2 diabetes drug discovery using Metformin as reference
 
-#### Biomarker Discovery Workflow
-- **Purpose**: Cancer biomarker discovery and validation
+### 2. Biomarker Discovery Workflow (`workflows/biomarker_discovery.py`)
+
+**Cancer biomarker discovery with network analysis and pathway enrichment**
+
+- **Purpose**: Professional biomarker discovery for cancer research
 - **Key Features**:
   - Gene expression analysis using HPA
-  - GO annotation analysis
+  - Protein-protein interaction analysis using HumanBase
+  - Pathway enrichment analysis with statistical filtering (q<0.05)
   - Literature search for biomarker evidence
-  - Clinical trial identification
+  - Composite scoring system for biomarker prioritization
 - **Example**: Breast cancer biomarker discovery for BRCA1, BRCA2, TP53, PTEN, PIK3CA
 
-#### Drug Repurposing Workflow
-- **Purpose**: Drug repurposing for precision medicine
+### 3. Precision Medicine Workflow (`workflows/precision_medicine.py`)
+
+**Patient genomic variant analysis and personalized therapy matching**
+
+- **Purpose**: Precision medicine for personalized treatment
 - **Key Features**:
-  - Disease analysis and target identification
-  - Existing drug mechanism analysis
-  - Repurposing literature search
-  - FDA drug comparison
-- **Example**: Alzheimer's disease drug repurposing for Donepezil, Memantine, Rivastigmine, Galantamine
+  - Patient genetic variant analysis
+  - Disease target identification and overlap analysis
+  - Drug response prediction simulation
+  - Clinical trial matching with eligibility criteria
+  - Personalized treatment recommendations
+- **Example**: Patient with specific genetic variants for disease treatment
 
-### 2. Simplified Examples
+### 4. Gene Expression Analysis Workflow (`workflows/gene_expression_analysis.py`)
 
-#### Drug Discovery Simple (`drug_discovery_simple.py`)
-- Streamlined drug discovery workflow
-- Direct tool usage without complex wrappers
-- Proper data flow between steps
+**Comprehensive gene expression analysis using HPA (Human Protein Atlas)**
 
-#### Genomics Simple (`genomics_simple.py`)
-- Genomics research workflow
-- Gene expression and pathway analysis
-- Literature integration
+- **Purpose**: Professional gene expression profiling and analysis
+- **Key Features**:
+  - Gene information retrieval and validation
+  - Comprehensive gene details and annotations
+  - Comparative expression analysis across cell lines
+  - Cancer prognostic significance analysis
+  - Biological process analysis
+  - Disease-specific expression analysis
+  - Pathway enrichment analysis
+- **Example**: Breast cancer gene expression analysis for BRCA1, BRCA2, TP53, PTEN, PIK3CA
 
-#### Literature Search Simple (`literature_search_simple.py`)
-- Multi-database literature search
-- Integration of ArXiv, PubMed, Europe PMC, Semantic Scholar, OpenAlex
-- Evidence synthesis
+### 5. Protein Interaction Analysis Workflow (`workflows/protein_interaction_analysis.py`)
 
-#### Protein Structure Simple (`protein_structure_simple.py`)
-- Protein structure analysis workflow
-- PDB data retrieval and analysis
-- 3D visualization
+**Comprehensive protein-protein interaction analysis using HumanBase**
 
-#### Clinical Trial Simple (`clinical_trial_simple.py`)
-- Clinical trial analysis pipeline
-- FDA drug data integration
-- Safety analysis
+- **Purpose**: Professional protein network analysis and functional annotation
+- **Key Features**:
+  - Gene validation and Ensembl ID mapping
+  - Protein-protein interaction network analysis
+  - Gene annotation analysis with GO terms
+  - Pathway enrichment analysis
+  - Network statistics and highly connected gene identification
+- **Example**: Breast cancer protein interaction analysis for BRCA1, BRCA2, TP53, PTEN, PIK3CA
+
+### 6. Clinical Guidelines Search Workflow (`workflows/clinical_guidelines_search.py`)
+
+**Multi-source clinical guidelines search and analysis**
+
+- **Purpose**: Evidence-based clinical decision support
+- **Key Features**:
+  - Search across 7 major guideline sources (NICE, PubMed, EuropePMC, OpenAlex, SemanticScholar, EvidenceBased, WHO)
+  - Guideline standardization and deduplication
+  - Citation-based ranking and analysis
+  - Summary statistics and source comparison
+  - Top guideline compilation
+- **Example**: Diabetes management guidelines search
+
+### 7. Literature Review Workflow (`workflows/literature_review.py`)
+
+**Comprehensive literature review across multiple academic databases**
+
+- **Purpose**: Professional literature review and evidence synthesis
+- **Key Features**:
+  - Search across 5 academic databases (ArXiv, PubMed, EuropePMC, SemanticScholar, OpenAlex)
+  - Paper deduplication and standardization
+  - Citation-based ranking and analysis
+  - Open access analysis
+  - Publication year distribution
+  - Source comparison and statistics
+- **Example**: Machine learning in drug discovery literature review
+
+## Cache Demonstrations
+
+- ``cache_usage_example.py`` — Step-by-step walkthrough of enabling caching, inspecting stats, and clearing results.
+- ``cache_stress_test.py`` — Randomized load generator that measures cache hit rates and timing performance under repeated calls.
 
 ## Key Features
 
@@ -87,18 +130,20 @@ A comprehensive example demonstrating three key scientific research workflows:
 
 ## Usage
 
-### Running Examples
+### Running Workflows
 
 ```bash
-# Run the comprehensive scientific research example
-python examples/scientific_research_example.py
+# Run individual professional workflows
+python examples/workflows/drug_discovery.py
+python examples/workflows/biomarker_discovery.py
+python examples/workflows/precision_medicine.py
+python examples/workflows/gene_expression_analysis.py
+python examples/workflows/protein_interaction_analysis.py
+python examples/workflows/clinical_guidelines_search.py
+python examples/workflows/literature_review.py
 
-# Run individual simplified examples
-python examples/drug_discovery_simple.py
-python examples/genomics_simple.py
-python examples/literature_search_simple.py
-python examples/protein_structure_simple.py
-python examples/clinical_trial_simple.py
+# Run all workflows (if you have a batch script)
+# Each workflow can be run independently
 ```
 
 ### Key Dependencies

@@ -14,13 +14,11 @@
       "properties": {
         "source_tool": {
           "type": "string",
-          "description": "The source tool specification (JSON string with name, description, parameter schema, and example outputs)",
-          "required": true
+          "description": "The source tool specification (JSON string with name, description, parameter schema, and example outputs)"
         },
         "target_tool": {
           "type": "string",
-          "description": "The target tool specification (JSON string with name, description, parameter schema)",
-          "required": true
+          "description": "The target tool specification (JSON string with name, description, parameter schema)"
         },
         "analysis_depth": {
           "type": "string",

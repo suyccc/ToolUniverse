@@ -27,7 +27,7 @@ Quick Start
 
 .. code-block:: python
 
-   from tooluniverse.execute_function import ToolUniverse
+   from tooluniverse import ToolUniverse
 
    # Enable SummarizationHook (default)
    tu = ToolUniverse(hooks_enabled=True)
@@ -37,7 +37,7 @@ Quick Start
 
    tu.load_tools(['uniprot'])
 
-   result = tu.run_one_function({
+   result = tu.run({
        "name": "UniProt_get_entry_by_accession",
        "arguments": {"accession": "P05067"}
    })
@@ -61,7 +61,7 @@ Quick Start
                }
            },
            "hook_config": {
-               "chunk_size": 32000,
+                   "chunk_size": 30000,
                "focus_areas": "protein_function_and_structure",
                "max_summary_length": 3500
            }
@@ -75,8 +75,8 @@ Configuration Options
 
 **Chunk Size**
 - Controls the size of chunks for processing
-- Default: 32000 characters
-- Range: 1000-5000 characters recommended
+- Default: 30000 characters
+- Range: 10000-50000 characters recommended for optimal performance
 
 **Focus Areas**
 - Specifies what to focus on during summarization
@@ -112,7 +112,7 @@ Examples
    tu = ToolUniverse(hooks_enabled=True)
    tu.load_tools(['europepmc'])
 
-   result = tu.run_one_function({
+   result = tu.run({
        "name": "EuropePMC_search_publications",
        "arguments": {
            "query": "CRISPR gene editing therapeutic applications",
@@ -155,7 +155,7 @@ Examples
    tu = ToolUniverse(hooks_enabled=True, hook_config=protein_config)
 
    # Execute protein tool
-   result = tu.run_one_function({
+   result = tu.run({
        "name": "UniProt_get_entry_by_accession",
        "arguments": {"accession": "P05067"}
    })
@@ -193,7 +193,7 @@ Examples
    tu = ToolUniverse(hooks_enabled=True, hook_config=compound_config)
 
    # Execute compound search
-   result = tu.run_one_function({
+   result = tu.run({
        "name": "ChEMBL_search_compounds",
        "arguments": {
            "compound_name": "aspirin",

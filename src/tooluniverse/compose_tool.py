@@ -447,8 +447,8 @@ class ComposeTool(BaseTool):
                 else:
                     return {"result": parsed_result}
             except (json.JSONDecodeError, TypeError):
-                # If it's not JSON, treat as error message
-                return {"error": result}
+                # If it's not JSON, treat as normal string result
+                return {"result": result}
         elif isinstance(result, dict):
             return result
         else:

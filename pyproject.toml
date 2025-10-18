@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "tooluniverse"
-version = "1.0.7"
+version = "1.0.9.1"
 description = "A comprehensive collection of scientific tools for Agentic AI, offering integration with the ToolUniverse SDK and MCP Server to support advanced scientific workflows."
 authors = [
     { name = "Shanghua Gao", email = "shanghuagao@gmail.com" }
@@ -32,6 +32,7 @@ dependencies = [
     "fitz>=0.0.1.dev2",
     "pandas>=2.2.3",
     "admet-ai>=1.2.0",
+    "setuptools>=70.0.0",  # Fix pkg_resources deprecation warnings
     "pdfplumber>=0.11.0",
     "playwright>=1.55.0",
     "faiss-cpu>=1.12.0",
@@ -115,10 +116,10 @@ generate-mcp-tools = "tooluniverse.generate_mcp_tools:run_generate"
 # Human Expert Feedback System
 tooluniverse-expert-feedback = "tooluniverse.remote.expert_feedback.human_expert_mcp_tools:main"
 tooluniverse-expert-feedback-web = "tooluniverse.remote.expert_feedback.start_web_interface:main"
-# Literature Search Web UIs
-tooluniverse-regular-search = "tooluniverse.web_tools.literature_search_ui.regular_search_app:main"
-tooluniverse-agent-search = "tooluniverse.web_tools.literature_search_ui.agent_search_app:main"
-tooluniverse-wide-research = "tooluniverse.web_tools.literature_search_ui.simple_app:main"
+# Literature Search Web UIs (Under testing)
+# tooluniverse-regular-search = "tooluniverse.web_tools.literature_search_ui.regular_search_app:main"
+# tooluniverse-agent-search = "tooluniverse.web_tools.literature_search_ui.agent_search_app:main"
+# tooluniverse-wide-research = "tooluniverse.web_tools.literature_search_ui.simple_app:main"
 # Health Check Tool
 tooluniverse-doctor = "tooluniverse.doctor:main"
 

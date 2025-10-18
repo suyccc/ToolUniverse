@@ -10,8 +10,7 @@
           "description": "List of phenotypes or symptoms",
           "items": {
             "type": "string",
-            "description": "The HPO ID of the phenotype or symptom.",
-            "required": true
+            "description": "The HPO ID of the phenotype or symptom."
           }
         },
         "limit": {

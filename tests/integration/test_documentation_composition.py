@@ -173,23 +173,23 @@ class TestToolUniverseCompositionIntegration:
         """Test real caching functionality in compose tools."""
         # Test caching mechanism
         cache_key = "test_compose_cache"
-        if cache_key in self.tu._cache:
-            result = self.tu._cache[cache_key]
-        else:
+        result = self.tu._cache.get(cache_key)
+        if result is None:
             try:
                 result = self.tu.run({
                     "name": "UniProt_get_entry_by_accession",
                     "arguments": {"accession": "P05067"}
                 })
-                self.tu._cache[cache_key] = result
+                self.tu._cache.set(cache_key, result)
             except Exception:
                 # Expected if API key not configured
                 result = {"error": "API key not configured"}
-                self.tu._cache[cache_key] = result
+                self.tu._cache.set(cache_key, result)
         
         # Verify caching worked
-        assert cache_key in self.tu._cache
-        assert self.tu._cache[cache_key] == result
+        cached_result = self.tu._cache.get(cache_key)
+        assert cached_result is not None
+        assert cached_result == result
 
     def test_compose_tool_streaming_real(self):
         """Test real streaming functionality in compose tools."""

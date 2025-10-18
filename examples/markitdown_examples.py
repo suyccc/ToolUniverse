@@ -15,14 +15,14 @@ import os
 import tempfile
 import base64
 from tooluniverse import ToolUniverse
+from urllib.request import pathname2url
 
 
 def example_1_basic_file_conversion():
     """Example 1: Convert a text file to Markdown."""
     # Initialize ToolUniverse and load MarkItDown tools
     tu = ToolUniverse()
-    tu.load_tools(tool_type=["markitdown"])
-    
+    tu.load_tools(include_tool_types=["MarkItDownTool"])  # load MarkItDownTool
     # Create a sample text file
     with tempfile.NamedTemporaryFile(mode='w', suffix='.txt', delete=False) as f:
         f.write("""# Research Paper
@@ -45,15 +45,16 @@ Machine learning shows great promise in accelerating drug discovery.
     
     try:
         # Convert file to Markdown
+        file_uri = f"file://{pathname2url(file_path)}"
         result = tu.run_one_function({
-            "name": "MarkItDown_convert_file",
+            "name": "convert_to_markdown",
             "arguments": {
-                "file_path": file_path
+                "uri": file_uri
             }
         })
         
         # Check if conversion was successful
-        if result.get("success"):
+        if result and not result.get("error"):
             # The converted Markdown content is in result["markdown_content"]
             markdown_content = result["markdown_content"]
             # Process the markdown content as needed
@@ -70,7 +71,7 @@ Machine learning shows great promise in accelerating drug discovery.
 def example_2_save_to_file():
     """Example 2: Convert file and save to output file."""
     tu = ToolUniverse()
-    tu.load_tools(tool_type=["markitdown"])
+    tu.load_tools(include_tool_types=["MarkItDownTool"])  # load MarkItDownTool
     
     # Create sample HTML content
     with tempfile.NamedTemporaryFile(mode='w', suffix='.html', delete=False) as f:
@@ -95,15 +96,16 @@ def example_2_save_to_file():
     
     try:
         # Convert and save to file
+        file_uri = f"file://{pathname2url(input_file)}"
         result = tu.run_one_function({
-            "name": "MarkItDown_convert_file",
+            "name": "convert_to_markdown",
             "arguments": {
-                "file_path": input_file,
+                "uri": file_uri,
                 "output_path": output_file
             }
         })
         
-        if result.get("success"):
+        if result and not result.get("error"):
             # Read the saved file
             with open(output_file, 'r') as f:
                 saved_content = f.read()
@@ -122,7 +124,7 @@ def example_2_save_to_file():
 def example_3_stream_conversion():
     """Example 3: Convert content from memory using stream conversion."""
     tu = ToolUniverse()
-    tu.load_tools(tool_type=["markitdown"])
+    tu.load_tools(include_tool_types=["MarkItDownTool"])  # load MarkItDownTool
     
     # Sample CSV data
     csv_data = """Name,Age,Department,Salary
@@ -134,15 +136,15 @@ Carol,42,Management,95000"""
     csv_b64 = base64.b64encode(csv_data.encode()).decode()
     
     # Convert from memory
+    data_uri = f"data:text/csv;base64,{csv_b64}"
     result = tu.run_one_function({
-        "name": "MarkItDown_convert_stream",
+        "name": "convert_to_markdown",
         "arguments": {
-            "file_content": csv_b64,
-            "file_extension": ".csv"
+            "uri": data_uri
         }
     })
     
-    if result.get("success"):
+    if result and not result.get("error"):
         # The converted content is in result["markdown_content"]
         return result["markdown_content"]
     else:
@@ -153,13 +155,11 @@ Carol,42,Management,95000"""
 def example_4_list_plugins():
     """Example 4: List available MarkItDown plugins."""
     tu = ToolUniverse()
-    tu.load_tools(tool_type=["markitdown"])
+    tu.load_tools(include_tool_types=["MarkItDownTool"])  # load MarkItDownTool
     
     # List available plugins
-    result = tu.run_one_function({
-        "name": "MarkItDown_list_plugins",
-        "arguments": {}
-    })
+    # MarkItDownTool does not expose plugin listing in this implementation
+    result = {"success": False, "error": "Plugin listing not supported"}
     
     if result.get("success"):
         plugins = result.get("plugins", [])
@@ -172,7 +172,7 @@ def example_4_list_plugins():
 def example_5_with_plugins():
     """Example 5: Convert file with plugins enabled."""
     tu = ToolUniverse()
-    tu.load_tools(tool_type=["markitdown"])
+    tu.load_tools(include_tool_types=["MarkItDownTool"])  # load MarkItDownTool
     
     # Create sample content
     with tempfile.NamedTemporaryFile(mode='w', suffix='.md', delete=False) as f:
@@ -189,15 +189,16 @@ This document uses **enhanced features** with plugins enabled.
     
     try:
         # Convert with plugins enabled
+        file_uri = f"file://{pathname2url(file_path)}"
         result = tu.run_one_function({
-            "name": "MarkItDown_convert_file",
+            "name": "convert_to_markdown",
             "arguments": {
-                "file_path": file_path,
+                "uri": file_uri,
                 "enable_plugins": True
             }
         })
         
-        if result.get("success"):
+        if result and not result.get("error"):
             return result["markdown_content"]
         else:
             print(f"Plugin conversion failed: {result.get('error')}")

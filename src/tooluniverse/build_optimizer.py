@@ -43,7 +43,7 @@ def cleanup_orphaned_files(tools_dir: Path, current_tool_names: Set[str]) -> int
         return 0
 
     cleaned_count = 0
-    keep_files = {"__init__.py", "_shared_client.py", "__pycache__"}
+    keep_files = {"__init__", "_shared_client", "__pycache__"}
 
     for file_path in tools_dir.iterdir():
         if (

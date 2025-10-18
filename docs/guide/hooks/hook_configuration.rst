@@ -14,7 +14,7 @@ Use `hook_type` for easy selection:
 
 .. code-block:: python
 
-   from tooluniverse.execute_function import ToolUniverse
+   from tooluniverse import ToolUniverse
 
    # Enable default SummarizationHook
    tu = ToolUniverse(hooks_enabled=True)
@@ -38,7 +38,7 @@ Use `hook_config` for detailed control:
            "enabled": True,
            "conditions": {"output_length": {"operator": ">", "threshold": 5000}},
            "hook_config": {
-               "chunk_size": 32000,
+               "chunk_size": 30000,
                "focus_areas": "key_findings_and_results"
            }
        }]
@@ -74,7 +74,7 @@ Configuration Structure
      "hook_type_defaults": {
        "SummarizationHook": {
          "default_output_length_threshold": 5000,
-         "default_chunk_size": 32000,
+         "default_chunk_size": 30000,
          "default_focus_areas": "key_findings_and_results",
          "default_max_summary_length": 3000
        },

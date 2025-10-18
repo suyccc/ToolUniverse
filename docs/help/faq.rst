@@ -123,7 +123,7 @@ Many scientific APIs have rate limits. ToolUniverse implements automatic rate li
 
          # Process in batches
          for batch in batches(gene_list, batch_size=10):
-             results = tu.run_batch(batch)
+             results = tu.run(batch, use_cache=True, max_workers=8)
              time.sleep(1)  # Add delay between batches
 
    .. tab:: Solution 3: Caching
@@ -133,7 +133,6 @@ Many scientific APIs have rate limits. ToolUniverse implements automatic rate li
       .. code-block:: python
 
          tu = ToolUniverse(enable_cache=True)
-
 Tool returns empty results?
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

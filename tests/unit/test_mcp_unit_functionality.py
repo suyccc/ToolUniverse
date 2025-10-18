@@ -268,18 +268,15 @@ class TestMCPFunctionality(unittest.TestCase):
             from tooluniverse.mcp_client_tool import MCPClientTool
             import time
             
-            client_tool = MCPClientTool(
-                tooluniverse=self.tu,
-                config={
-                    "name": "performance_test_client",
-                    "description": "A performance test client",
-                    "transport": "stdio",
-                    "command": "echo"
-                }
-            )
-            
-            # Test execution time
+            # Initialize start_time before any potential exceptions
             start_time = time.time()
+            
+            client_tool = MCPClientTool({
+                "name": "performance_test_client",
+                "description": "A performance test client",
+                "transport": "stdio",
+                "command": "echo"
+            })
             
             result = client_tool.run({
                 "name": "test_tool",
@@ -304,29 +301,30 @@ class TestMCPFunctionality(unittest.TestCase):
         try:
             from tooluniverse.mcp_client_tool import MCPClientTool
             import threading
-            import time
             
             results = []
+            results_lock = threading.Lock()
             
             def make_call(call_id):
-                client_tool = MCPClientTool(
-                    tooluniverse=self.tu,
-                    config={
+                try:
+                    client_tool = MCPClientTool({
                         "name": f"concurrent_client_{call_id}",
                         "description": f"A concurrent client {call_id}",
                         "transport": "stdio",
                         "command": "echo"
-                    }
-                )
-                
-                try:
+                    })
+                    
                     result = client_tool.run({
                         "name": "test_tool",
                         "arguments": {"test": f"value_{call_id}"}
                     })
-                    results.append(result)
+                    
+                    with results_lock:
+                        results.append(result)
+                        
                 except Exception as e:
-                    results.append({"error": str(e)})
+                    with results_lock:
+                        results.append({"error": str(e), "call_id": call_id})
             
             # Create multiple threads
             threads = []
@@ -335,12 +333,15 @@ class TestMCPFunctionality(unittest.TestCase):
                 threads.append(thread)
                 thread.start()
             
-            # Wait for all threads
+            # Wait for all threads with timeout
             for thread in threads:
-                thread.join()
+                thread.join(timeout=10)  # 10 second timeout per thread
             
             # Verify all calls completed
-            self.assertEqual(len(results), 3)
+            self.assertEqual(
+                len(results), 3, 
+                f"Expected 3 results, got {len(results)}: {results}"
+            )
             for result in results:
                 self.assertIsInstance(result, dict)
                 

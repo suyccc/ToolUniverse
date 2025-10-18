@@ -27,13 +27,13 @@ Quick Start
 
 .. code-block:: python
 
-   from tooluniverse.execute_function import ToolUniverse
+   from tooluniverse import ToolUniverse
 
    # Enable FileSaveHook
    tu = ToolUniverse(hooks_enabled=True, hook_type='FileSaveHook')
    tu.load_tools(['uniprot'])
 
-   result = tu.run_one_function({
+   result = tu.run({
        "name": "UniProt_get_entry_by_accession",
        "arguments": {"accession": "P05067"}
    })
@@ -134,7 +134,7 @@ Examples
    tu = ToolUniverse(hooks_enabled=True, hook_type='FileSaveHook')
    tu.load_tools(['uniprot'])
 
-   result = tu.run_one_function({
+   result = tu.run({
        "name": "UniProt_get_entry_by_accession",
        "arguments": {"accession": "P05067"}
    })
@@ -182,7 +182,7 @@ Examples
    tu = ToolUniverse(hooks_enabled=True, hook_type='FileSaveHook')
    tu.load_tools(['europepmc'])
 
-   result = tu.run_one_function({
+   result = tu.run({
        "name": "EuropePMC_search_publications",
        "arguments": {"query": "machine learning drug discovery"}
    })

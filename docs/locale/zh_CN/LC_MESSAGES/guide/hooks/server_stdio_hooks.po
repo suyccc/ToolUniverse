@@ -210,7 +210,7 @@ msgstr "**hook_config**（最高优先级）"
 #: ../../guide/hooks/server_stdio_hooks.rst:229
 #: 02ab42e613914dde82db58b16c654ad3
 msgid "**hook_type**"
-msgstr ""
+msgstr "**钩子类型**"
 
 #: ../../guide/hooks/server_stdio_hooks.rst:230
 #: a738e8ab28db47a494213f90e40c6a6d

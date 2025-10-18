@@ -377,7 +377,7 @@ msgstr ""
 
 #: ../../old_files/SUMMARY.md:297 032bcd591f7246e09674d01852209047
 msgid "清晰的输出"
-msgstr ""
+msgstr "清晰输出"
 
 #: ../../old_files/SUMMARY.md:298 c91e4bf465a0426692f3bff403f2f7af
 msgid "多种访问方式"
@@ -513,7 +513,7 @@ msgstr ""
 
 #: ../../old_files/SUMMARY.md:358 14e4f4cfc6d34081beb09a1f2efab08a
 msgid "现在 ToolUniverse 文档系统拥有："
-msgstr ""
+msgstr "现在 ToolUniverse 文档系统具备："
 
 #: ../../old_files/SUMMARY.md:360 7f3baeb4e02e4c1194e8b155e21585be
 msgid ""

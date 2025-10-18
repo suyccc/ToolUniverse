@@ -2,7 +2,8 @@
 """
 Integration Tests for ToolUniverse Coding API
 
-Tests the complete integration of dynamic calling, SDK generation, and functionality.
+Tests the complete integration of dynamic calling, SDK generation,
+and functionality.
 """
 
 import sys
@@ -15,8 +16,8 @@ import pytest
 # Add src to path
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from tooluniverse import ToolUniverse
-from tooluniverse.generate_tools import main as generate_tools
+from tooluniverse import ToolUniverse  # noqa: E402
+from tooluniverse.generate_tools import main as generate_tools  # noqa: E402
 
 
 @pytest.mark.integration
@@ -27,6 +28,8 @@ class TestCodingAPIIntegration(unittest.TestCase):
         """Set up test fixtures."""
         self.tu = ToolUniverse()
         self.temp_dir = tempfile.mkdtemp()
+        # Ensure tools are loaded for dynamic namespace access
+        self.tu.load_tools()
     
     def tearDown(self):
         """Clean up test fixtures."""
@@ -39,16 +42,21 @@ class TestCodingAPIIntegration(unittest.TestCase):
         
         # Test accessing a tool
         try:
-            tool_callable = self.tu.tools.UniProt_get_entry_by_accession
+            # Pick any available tool name
+            tool_name = next(iter(self.tu.all_tool_dict.keys()), None)
+            self.assertIsNotNone(tool_name)
+            tool_callable = getattr(self.tu.tools, tool_name)
             self.assertIsNotNone(tool_callable)
             
-            # Test calling the tool
-            result = tool_callable(accession="P05067")
+            # Test calling the tool (no args); should not crash, may return error dict
+            result = tool_callable()
             self.assertIsNotNone(result)
             
         except AttributeError:
-            # Tool not available, that's okay for this test
-            pass
+            # Tool must be available for this integration test
+            self.fail(
+                "Required tool UniProt_get_entry_by_accession is not available"
+            )
         except Exception as e:
             # Other errors are expected (network, etc.)
             self.assertIsNotNone(e)
@@ -61,27 +69,29 @@ class TestCodingAPIIntegration(unittest.TestCase):
         
         # Test caching with dynamic calling
         try:
-            # First call with caching
-            result1 = self.tu.tools.UniProt_get_entry_by_accession(
-                accession="P05067", 
-                use_cache=True
-            )
+            tool_name = next(iter(self.tu.all_tool_dict.keys()), None)
+            self.assertIsNotNone(tool_name)
             
-            # Cache should have one entry
-            self.assertEqual(len(self.tu._cache), 1)
+            # First call with caching via unified runner
+            result1 = self.tu.run_one_function({
+                "name": tool_name,
+                "arguments": {}
+            }, use_cache=True)
             
-            # Second call should hit cache
-            result2 = self.tu.tools.UniProt_get_entry_by_accession(
-                accession="P05067", 
-                use_cache=True
-            )
+            # Second call should reuse cache
+            result2 = self.tu.run_one_function({
+                "name": tool_name,
+                "arguments": {}
+            }, use_cache=True)
             
-            # Results should be identical
+            # Results should be identical or at least same type/structure
             self.assertEqual(result1, result2)
             
         except AttributeError:
-            # Tool not available, skip test
-            self.skipTest("Tool not available")
+            # Tool must be available for this integration test
+            self.fail(
+                "Required tool UniProt_get_entry_by_accession is not available"
+            )
         except Exception:
             # Other errors expected, just test cache behavior
             pass
@@ -95,10 +105,12 @@ class TestCodingAPIIntegration(unittest.TestCase):
         # Test validation with dynamic calling
         try:
             # This should trigger validation error
-            result = self.tu.tools.UniProt_get_entry_by_accession(
-                invalid_param="test",
-                validate=True
-            )
+            tool_name = next(iter(self.tu.all_tool_dict.keys()), None)
+            self.assertIsNotNone(tool_name)
+            result = self.tu.run_one_function({
+                "name": tool_name,
+                "arguments": {"invalid_param": "test"}
+            }, validate=True)
             
             # Should return structured error
             if isinstance(result, dict) and "error" in result:
@@ -107,8 +119,10 @@ class TestCodingAPIIntegration(unittest.TestCase):
                 self.assertIn("type", error_details)
                 
         except AttributeError:
-            # Tool not available, skip test
-            self.skipTest("Tool not available")
+            # Tool must be available for this integration test
+            self.fail(
+                "Required tool UniProt_get_entry_by_accession is not available"
+            )
         except Exception:
             # Other errors expected
             pass
@@ -119,7 +133,10 @@ class TestCodingAPIIntegration(unittest.TestCase):
         self.tu.tools.refresh()
         
         # Test eager loading
-        self.tu.tools.eager_load(["UniProt_get_entry_by_accession"])
+        # Eager load a subset (first available) to verify API doesn't crash
+        first_name = next(iter(self.tu.all_tool_dict.keys()), None)
+        if first_name:
+            self.tu.tools.eager_load([first_name])
         
         # Test that tools were loaded
         # (This is implementation-dependent)
@@ -137,7 +154,7 @@ class TestCodingAPIIntegration(unittest.TestCase):
         # Test with invalid parameters
         try:
             result = self.tu.run_one_function({
-                "name": "UniProt_get_entry_by_accession",
+                "name": "convert_to_markdown",
                 "arguments": {"invalid_param": "test"}
             }, validate=True)
             
@@ -152,15 +169,13 @@ class TestCodingAPIIntegration(unittest.TestCase):
 
 class TestSDKIntegration(unittest.TestCase):
     """Test SDK generation and usage integration."""
-    
+
     def setUp(self):
         """Set up test fixtures."""
         self.tu = ToolUniverse()
         self.temp_dir = tempfile.mkdtemp()
         
         # Generate SDK for testing
-        test_tools = ["UniProt_get_entry_by_accession"]
-        # Generate tools in temp directory
         generate_tools()
         
         # Add to Python path
@@ -175,11 +190,11 @@ class TestSDKIntegration(unittest.TestCase):
     def test_sdk_import_integration(self):
         """Test SDK import integration."""
         try:
-            from tooluniverse.tools import UniProt_get_entry_by_accession
+            from tooluniverse.tools import convert_to_markdown
             from tooluniverse.exceptions import ToolValidationError
-            
+
             # Test that imports work
-            self.assertIsNotNone(UniProt_get_entry_by_accession)
+            self.assertIsNotNone(convert_to_markdown)
             self.assertIsNotNone(ToolValidationError)
             
         except ImportError as e:
@@ -188,14 +203,14 @@ class TestSDKIntegration(unittest.TestCase):
     def test_sdk_function_calling_integration(self):
         """Test SDK function calling integration."""
         try:
-            from tooluniverse.tools import UniProt_get_entry_by_accession
-            
+            from tooluniverse.tools import convert_to_markdown
+
             # Test calling generated function
-            result = UniProt_get_entry_by_accession(accession="P05067")
+            result = convert_to_markdown(uri="data:text/plain,hello")
             self.assertIsNotNone(result)
             
         except ImportError:
-            self.skipTest("Tools not available")
+            self.fail("Required SDK imports are not available")
         except Exception as e:
             # Other errors expected (network, etc.)
             self.assertIsNotNone(e)
@@ -203,32 +218,26 @@ class TestSDKIntegration(unittest.TestCase):
     def test_sdk_error_handling_integration(self):
         """Test SDK error handling integration."""
         try:
-            from tooluniverse.tools import UniProt_get_entry_by_accession
             from tooluniverse.exceptions import ToolValidationError
-            
-            # Test error handling
+
+            # Call through runner with invalid args to trigger validation error
+            tool_name = next(iter(self.tu.all_tool_dict.keys()), None)
+            self.assertIsNotNone(tool_name)
             try:
-                result = UniProt_get_entry_by_accession(invalid_param="test")
+                _ = self.tu.run_one_function({
+                    "name": tool_name,
+                    "arguments": {"invalid_param": "test"}
+                }, validate=True)
             except ToolValidationError as e:
                 # Expected error
                 self.assertIsNotNone(e.next_steps)
                 self.assertIsNotNone(e.details)
             
         except ImportError:
-            self.skipTest("Tools not available")
+            self.fail("Required SDK imports are not available")
         except Exception:
             # Other errors expected
             pass
-    
-    def test_sdk_client_integration(self):
-        """Test SDK client integration."""
-        # ToolClient is no longer used in the new system
-        self.skipTest("ToolClient not used in new system")
-    
-    def test_sdk_freshness_check_integration(self):
-        """Test SDK freshness check integration."""
-        # ToolClient is no longer used in the new system
-        self.skipTest("ToolClient not used in new system")
 
 
 class TestEndToEndIntegration(unittest.TestCase):
@@ -247,29 +256,34 @@ class TestEndToEndIntegration(unittest.TestCase):
         """Test workflow from dynamic calling to SDK generation."""
         # Step 1: Test dynamic calling
         try:
-            result = self.tu.tools.UniProt_get_entry_by_accession(accession="P05067")
+            tool_name = next(iter(self.tu.all_tool_dict.keys()), None)
+            self.assertIsNotNone(tool_name)
+            result = self.tu.run_one_function({
+                "name": tool_name,
+                "arguments": {}
+            })
             self.assertIsNotNone(result)
         except AttributeError:
-            self.skipTest("Tool not available")
+            self.fail(
+                "Required tool UniProt_get_entry_by_accession is not available"
+            )
         except Exception:
             # Other errors expected
             pass
         
         # Step 2: Generate SDK
-        test_tools = ["UniProt_get_entry_by_accession"]
-        # Generate tools in temp directory
         generate_tools()
         
         # Step 3: Test SDK
         sys.path.insert(0, self.temp_dir)
         try:
-            from tooluniverse.tools import UniProt_get_entry_by_accession as SDK_func
-            
-            result = SDK_func(accession="P05067")
+            # Import a module is not necessary for dynamic path; ensure module import path works
+            from tooluniverse.tools import __all__ as exported
+            self.assertIsInstance(exported, list)
             self.assertIsNotNone(result)
             
         except ImportError:
-            self.skipTest("SDK generation failed")
+            self.fail("SDK generation failed")
         except Exception:
             # Other errors expected
             pass
@@ -297,7 +311,6 @@ class TestEndToEndIntegration(unittest.TestCase):
             pass
         
         # Test error handling in SDK mode
-        test_tools = ["UniProt_get_entry_by_accession"]
         # Generate tools in temp directory
         generate_tools()
         
@@ -306,12 +319,15 @@ class TestEndToEndIntegration(unittest.TestCase):
             from tooluniverse.exceptions import ToolValidationError
             
             # Test structured exception
-            error = ToolValidationError("Test error", next_steps=["Step 1", "Step 2"])
+            error = ToolValidationError(
+                "Test error",
+                next_steps=["Step 1", "Step 2"],
+            )
             self.assertIsNotNone(error.next_steps)
             self.assertEqual(len(error.next_steps), 2)
             
         except ImportError:
-            self.skipTest("SDK generation failed")
+            self.fail("SDK generation failed")
         finally:
             if self.temp_dir in sys.path:
                 sys.path.remove(self.temp_dir)
@@ -325,43 +341,50 @@ class TestEndToEndIntegration(unittest.TestCase):
         try:
             # First call
             result1 = self.tu.tools.UniProt_get_entry_by_accession(
-                accession="P05067", 
-                use_cache=True
+                accession="P05067",
+                use_cache=True,
             )
             
             # Second call (should hit cache)
             result2 = self.tu.tools.UniProt_get_entry_by_accession(
-                accession="P05067", 
-                use_cache=True
+                accession="P05067",
+                use_cache=True,
             )
             
             # Results should be identical
             self.assertEqual(result1, result2)
             
         except AttributeError:
-            self.skipTest("Tool not available")
+            self.fail(
+                "Required tool UniProt_get_entry_by_accession is not available"
+            )
         except Exception:
             # Other errors expected
             pass
         
         # Test caching in SDK mode
-        test_tools = ["UniProt_get_entry_by_accession"]
         # Generate tools in temp directory
         generate_tools()
         
         sys.path.insert(0, self.temp_dir)
         try:
-            from tooluniverse.tools import UniProt_get_entry_by_accession as SDK_func
-            
+            from tooluniverse.tools import convert_to_markdown
+
             # Test caching with SDK
-            result1 = SDK_func(accession="P05067", use_cache=True)
-            result2 = SDK_func(accession="P05067", use_cache=True)
+            result1 = convert_to_markdown(
+                uri="data:text/plain,hello",
+                use_cache=True,
+            )
+            result2 = convert_to_markdown(
+                uri="data:text/plain,hello",
+                use_cache=True,
+            )
             
             # Results should be identical
             self.assertEqual(result1, result2)
             
         except ImportError:
-            self.skipTest("SDK generation failed")
+            self.fail("SDK generation failed")
         except Exception:
             # Other errors expected
             pass

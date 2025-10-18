@@ -336,7 +336,7 @@ msgstr ""
 #: ../../tutorials/aiscientists/adding_mcp_tools.md:194
 #: fa3813cea6e144ccbbb21027c446abd1
 msgid "使用 `MCPServerDiscovery` 类批量发现和创建智能体工具："
-msgstr ""
+msgstr "使用 `MCPServerDiscovery` 类批量发现并创建智能体工具："
 
 #: ../../tutorials/aiscientists/adding_mcp_tools.md:216
 #: 55af0e4c2dbe443689cbb74f7d70f182
@@ -490,7 +490,7 @@ msgstr "4. 参数验证未通过"
 #: ../../tutorials/aiscientists/adding_mcp_tools.md:402
 #: e700c1bd8afc4e3c8da1dba2f91f35ba
 msgid "检查工具的参数 schema"
-msgstr ""
+msgstr "检查工具的参数架构"
 
 #: ../../tutorials/aiscientists/adding_mcp_tools.md:403
 #: adec7929d59a4799903bbaed58868b9b
@@ -560,7 +560,7 @@ msgstr ""
 #: ../../tutorials/aiscientists/adding_mcp_tools.md:449
 #: 746c4d7b941e46c7950ec2b34beaf895
 msgid "合理设置 `timeout` 值"
-msgstr ""
+msgstr "合理设置 `timeout` 参数值"
 
 #: ../../tutorials/aiscientists/adding_mcp_tools.md:450
 #: 9a3631e9285f456289159de06ceabfcd
