@@ -65,7 +65,7 @@ Example Configurations
            }
          },
          "hook_config": {
-           "chunk_size": 32000,
+           "chunk_size": 30000,
            "focus_areas": "key_findings_and_results",
            "max_summary_length": 3000
          }
@@ -151,7 +151,7 @@ Basic Usage
 
 .. code-block:: python
 
-   from tooluniverse.smcp import SMCP
+   from tooluniverse import SMCP
 
    # Enable hooks with default SummarizationHook
    server = SMCP(

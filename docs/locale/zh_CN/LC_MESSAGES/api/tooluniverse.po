@@ -70,7 +70,7 @@ msgstr "类型"
 #: tooluniverse.tool_finder_embedding.ToolFinderEmbedding:29
 #: tooluniverse.tool_finder_embedding.ToolFinderEmbedding:41
 msgid ":py:class:`list`"
-msgstr ""
+msgstr ":py:class:`列表`"
 
 #: d89dc9e760d54c7cbc8e2c1ea7f63715 of
 #: tooluniverse.execute_function.ToolUniverse:15
@@ -2157,6 +2157,7 @@ msgstr "验证基于枚举的参数是否与允许的值匹配"
 msgid ""
 "Bases: :py:class:`~tooluniverse.openfda_adv_tool.FDADrugAdverseEventTool`"
 msgstr ""
+"基础类：:py:class:`~tooluniverse.openfda_adv_tool.FDADrugAdverseEventTool`"
 
 #: cf306b925291443ea0bdb9e7cad31895 of
 #: tooluniverse.openfda_adv_tool.FDACountAdditiveReactionsTool:1
@@ -2903,6 +2904,8 @@ msgstr "需要排除加载的特定工具名称。这些工具即使属于已加
 #: 8626148b486f4d9aa213d873207c044a of tooluniverse.smcp.SMCP:76
 msgid "exclude_categories"
 msgstr ""
+"exclude_categories  \n"
+"排除类别"
 
 #: 244e06149533401d941108677591f2ce of tooluniverse.smcp.SMCP:77
 msgid ""
@@ -2924,7 +2927,7 @@ msgstr "如果提供了特定工具名称，则仅加载这些工具，而不考
 
 #: 317e03fea24d45829a8234fe10334e7f of tooluniverse.smcp.SMCP:85
 msgid "tools_file"
-msgstr ""
+msgstr "工具_文件"
 
 #: 0ce6d68cb88340c68872dd8960104496 of tooluniverse.smcp.SMCP:86
 msgid ""
@@ -2935,7 +2938,7 @@ msgstr "包含工具名称的文本文件路径（每行一个）。作为 inclu
 
 #: 6d4dc0b3bb2d46ddb399bc413a44f3b4 of tooluniverse.smcp.SMCP:90
 msgid "tool_config_files"
-msgstr ""
+msgstr "工具配置文件"
 
 #: 94da79dff031441b90fe7024b6cc418c of tooluniverse.smcp.SMCP:-1
 msgid "dict of str, optional"
@@ -2967,6 +2970,8 @@ msgstr ""
 #: dcd564bc84c54eb880f906bfdf732032 of tooluniverse.smcp.SMCP:100
 msgid "exclude_tool_types"
 msgstr ""
+"exclude_tool_types  \n"
+"排除工具类型"
 
 #: d1dfbfe652cf4dd8ba126df93f9f7274 of tooluniverse.smcp.SMCP:101
 msgid ""
@@ -3030,6 +3035,8 @@ msgstr "用于工具执行的最大并发工作线程数。较高的值允许更
 #: 55516a72ea70481abcea80527682ddc9 of tooluniverse.smcp.SMCP:120
 msgid "hooks_enabled"
 msgstr ""
+"hooks_enabled  \n"
+"挂钩启用"
 
 #: 9befcdba389442c49eed962bfae76ae8 of tooluniverse.smcp.SMCP:-1
 msgid "bool, default False"
@@ -3696,6 +3703,8 @@ msgstr "是否在可用时优先选择由AI驱动的搜索"
 #: tooluniverse.smcp.SMCP._perform_tool_search:16
 msgid "search_method"
 msgstr ""
+"search_method  \n"
+"搜索方法"
 
 #: adfca51e8e2a4e98bf55a9ca43f20acc of
 #: tooluniverse.smcp.SMCP._perform_tool_search:-1
@@ -4343,6 +4352,9 @@ msgstr "返回值：包含已发现工具和搜索元数据的 JSON 字符串"
 #: tooluniverse.smcp.SMCP._add_search_tools:22
 msgid "search_tools:"
 msgstr ""
+"search_tools:\n"
+"\n"
+"搜索工具："
 
 #: 443642ec88f24e4eb19c4cf492bc4800 of
 #: tooluniverse.smcp.SMCP._add_search_tools:23
@@ -5173,7 +5185,7 @@ msgstr "带有复杂参数的异步函数：```python async def process_data("
 #: 4b62a050eb3a42e0bdcc8dcb32a4e4c4 of
 #: tooluniverse.smcp.SMCP.add_custom_tool:58
 msgid "data: List[Dict[str, Any]], processing_type: str = \"standard\""
-msgstr ""
+msgstr "数据：List[Dict[str, Any]]，处理类型：str = \"standard\""
 
 #: 65b3d4fc6b5e4effbdedb42c9ef63382 of
 #: tooluniverse.smcp.SMCP.add_custom_tool:60

@@ -1,7 +1,7 @@
 """
 ToolUniverse Tools
 
-Type-safe Python interface to 670 scientific tools.
+Type-safe Python interface to 669 scientific tools.
 Each tool is in its own module for minimal import overhead.
 
 Usage:
@@ -497,7 +497,6 @@ from .MedlinePlus_get_genetics_gene_by_name import MedlinePlus_get_genetics_gene
 from .MedlinePlus_get_genetics_index import MedlinePlus_get_genetics_index
 from .MedlinePlus_search_topics_by_keyword import MedlinePlus_search_topics_by_keyword
 from .MethodologyRigorReviewer import MethodologyRigorReviewer
-from .MultiAgentLiteratureSearch import MultiAgentLiteratureSearch
 from .NICE_Clinical_Guidelines_Search import NICE_Clinical_Guidelines_Search
 from .NICE_Guideline_Full_Text import NICE_Guideline_Full_Text
 from .NoveltySignificanceReviewer import NoveltySignificanceReviewer
@@ -1351,7 +1350,6 @@ __all__ = [
     "MedlinePlus_get_genetics_index",
     "MedlinePlus_search_topics_by_keyword",
     "MethodologyRigorReviewer",
-    "MultiAgentLiteratureSearch",
     "NICE_Clinical_Guidelines_Search",
     "NICE_Guideline_Full_Text",
     "NoveltySignificanceReviewer",

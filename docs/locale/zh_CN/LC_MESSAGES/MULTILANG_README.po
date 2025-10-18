@@ -26,7 +26,7 @@ msgstr ""
 
 #: ../../MULTILANG_README.md:3 4a6cea99a27d4f2982135ee0a4998f6f
 msgid "✨ 功能特性"
-msgstr ""
+msgstr "✨ 功能特点"
 
 #: ../../MULTILANG_README.md:5 c00fa8d278a04852933adf984cac74be
 msgid "✅ **完整的中英文支持** - 使用 Sphinx i18n 系统"
@@ -79,7 +79,7 @@ msgstr ""
 
 #: ../../MULTILANG_README.md:25 b4714e4ed0544537ab4439a3097b5ac2
 msgid "更新翻译文件"
-msgstr ""
+msgstr "更新翻译文档"
 
 #: ../../MULTILANG_README.md:26 5a51c5b44e0740beb8fcca857eb3b518
 msgid "打开语言选择页"
@@ -246,7 +246,7 @@ msgstr ""
 
 #: ../../MULTILANG_README.md:169 f79ffbe363d7486e967face0ec8fb148
 msgid "❓ 参考资料"
-msgstr ""
+msgstr "❓ 参考文档"
 
 #: ../../MULTILANG_README.md:171 81de51749bff47408f0cf72018cac5cc
 msgid "待翻译"
@@ -400,7 +400,7 @@ msgstr "浏览器控制台是否存在错误"
 
 #: ../../MULTILANG_README.md:242 a678c0bc9ce54d20b5dae1af351300b6
 msgid "Q: 如何部署多语言文档？"
-msgstr ""
+msgstr "问：如何部署多语言文档？"
 
 #: ../../MULTILANG_README.md:244 bbb8ba937aea4fcdbc584c5e03aa310f
 msgid "A:"

@@ -11,7 +11,11 @@ intelligent, context-aware summarization that focuses on information
 relevant to the original query.
 """
 
+import logging
 from typing import Dict, Any, List
+
+# Set up logger for this module
+logger = logging.getLogger("tooluniverse.output_summarizer")
 
 
 def compose(arguments: Dict[str, Any], tooluniverse, call_tool) -> Dict[str, Any]:
@@ -30,7 +34,8 @@ def compose(arguments: Dict[str, Any], tooluniverse, call_tool) -> Dict[str, Any
             - tool_name (str): Name of the tool that generated the output
             - chunk_size (int, optional): Size of each chunk for processing
             - focus_areas (str, optional): Areas to focus on in summarization
-            - max_summary_length (int, optional): Maximum length of final summary
+            - max_summary_length (int, optional): Maximum length of final
+              summary
         tooluniverse: ToolUniverse instance for tool execution
         call_tool: Function to call other tools within the composition
 
@@ -61,33 +66,53 @@ def compose(arguments: Dict[str, Any], tooluniverse, call_tool) -> Dict[str, Any
                 "original_output": "",
             }
 
-        print(f"🔍 Starting output summarization for {tool_name}")
-        print(f"📊 Original output length: {len(tool_output)} characters")
+        logger.info(f"🔍 Starting output summarization for {tool_name}")
+        logger.info(f"📊 Original output length: {len(tool_output)} characters")
+
+        # Check if text is long enough to warrant summarization
+        if len(tool_output) < chunk_size:
+            logger.info(
+                f"📝 Text is shorter than chunk_size ({chunk_size}), "
+                f"no summarization needed"
+            )
+            return {
+                "success": True,
+                "original_length": len(tool_output),
+                "summary_length": len(tool_output),
+                "chunks_processed": 0,
+                "summary": tool_output,
+                "tool_name": tool_name,
+            }
 
         # Step 1: Chunk the output
         chunks = _chunk_output(tool_output, chunk_size)
-        print(f"📝 Split into {len(chunks)} chunks")
+        logger.info(f"📝 Split into {len(chunks)} chunks")
 
         # Step 2: Summarize each chunk
         chunk_summaries = []
         for i, chunk in enumerate(chunks):
-            print(f"🤖 Processing chunk {i+1}/{len(chunks)}")
+            logger.info(f"🤖 Processing chunk {i+1}/{len(chunks)}")
             summary = _summarize_chunk(
                 chunk, query_context, tool_name, focus_areas, call_tool
             )
             if summary:
                 chunk_summaries.append(summary)
-                print(f"✅ Chunk {i+1} summarized successfully")
+                logger.info(f"✅ Chunk {i+1} summarized successfully")
             else:
-                print(f"❌ Chunk {i+1} summarization failed")
+                logger.warning(f"❌ Chunk {i+1} summarization failed")
 
         # Step 3: Merge summaries (or gracefully fall back)
         if chunk_summaries:
             final_summary = _merge_summaries(
-                chunk_summaries, query_context, tool_name, max_summary_length, call_tool
+                chunk_summaries,
+                query_context,
+                tool_name,
+                max_summary_length,
+                call_tool,
             )
-            print(
-                f"✅ Summarization completed. Final length: {len(final_summary)} characters"
+            logger.info(
+                f"✅ Summarization completed. Final length: "
+                f"{len(final_summary)} characters"
             )
             return {
                 "success": True,
@@ -98,12 +123,17 @@ def compose(arguments: Dict[str, Any], tooluniverse, call_tool) -> Dict[str, Any
                 "tool_name": tool_name,
             }
         else:
-            # Treat as a non-fatal failure so upstream falls back to original output
-            print("❌ No chunk summaries were generated. This usually indicates:")
-            print("   1. ToolOutputSummarizer tool is not available")
-            print("   2. The output_summarization tools are not loaded")
-            print("   3. There was an error in the summarization process")
-            print("   Please check that the SMCP server is started with hooks enabled.")
+            # Treat as a non-fatal failure so upstream falls back to original
+            # output
+            logger.warning(
+                "❌ No chunk summaries were generated. This usually indicates:"
+            )
+            logger.warning("   1. ToolOutputSummarizer tool is not available")
+            logger.warning("   2. The output_summarization tools are not loaded")
+            logger.warning("   3. There was an error in the summarization process")
+            logger.warning(
+                "   Please check that the SMCP server is started with hooks " "enabled."
+            )
             return {
                 "success": False,
                 "error": "No chunk summaries generated",
@@ -115,13 +145,18 @@ def compose(arguments: Dict[str, Any], tooluniverse, call_tool) -> Dict[str, Any
 
     except Exception as e:
         error_msg = f"Error in output summarization: {str(e)}"
-        print(f"❌ {error_msg}")
-        return {"success": False, "error": error_msg, "original_output": tool_output}
+        logger.error(f"❌ {error_msg}")
+        return {
+            "success": False,
+            "error": error_msg,
+            "original_output": tool_output,
+        }
 
 
 def _chunk_output(text: str, chunk_size: int) -> List[str]:
     """
-    Split text into chunks of specified size with intelligent boundary detection.
+    Split text into chunks of specified size with intelligent boundary
+    detection.
 
     This function attempts to break text at natural boundaries (sentences)
     to maintain coherence within chunks while respecting the size limit.
@@ -177,8 +212,9 @@ def _summarize_chunk(
         str: Summarized chunk text, or empty string if summarization fails
     """
     try:
-        print(
-            f"🔍 Attempting to call ToolOutputSummarizer with chunk length: {len(chunk)}"
+        logger.debug(
+            f"🔍 Attempting to call ToolOutputSummarizer with chunk length: "
+            f"{len(chunk)}"
         )
         result = call_tool(
             "ToolOutputSummarizer",
@@ -191,32 +227,50 @@ def _summarize_chunk(
             },
         )
 
-        print(
-            f"🔍 ToolOutputSummarizer returned: {type(result)} - {str(result)[:100]}..."
+        logger.debug(
+            f"🔍 ToolOutputSummarizer returned: {type(result)} - "
+            f"{str(result)[:100]}..."
         )
 
         # Handle different result formats
-        if isinstance(result, dict) and result.get("success"):
-            return result.get("result", "")
+        if isinstance(result, dict):
+            if result.get("success"):
+                return result.get("result", "")
+            elif "result" in result and isinstance(result["result"], str):
+                # ComposeTool._call_tool returns {'result': 'content'} format
+                return result["result"]
+            elif "error" in result and isinstance(result["error"], str):
+                # Backward compatibility: ComposeTool._call_tool used to put
+                # string results in error field. This workaround handles both
+                # old and new behavior
+                return result["error"]
+            else:
+                logger.warning(f"⚠️ ToolOutputSummarizer returned error: {result}")
+                return ""
         elif isinstance(result, str):
+            # When return_metadata=False and successful, AgenticTool returns
+            # the string directly
             return result
         else:
-            print(
-                f"⚠️ ToolOutputSummarizer returned unexpected result format: {type(result)}"
+            logger.warning(
+                f"⚠️ ToolOutputSummarizer returned unexpected result format: "
+                f"{type(result)}"
             )
             return ""
 
     except Exception as e:
         error_msg = str(e)
-        print(f"⚠️ Error summarizing chunk: {error_msg}")
+        logger.warning(f"⚠️ Error summarizing chunk: {error_msg}")
 
         # Check if the error is due to missing tool
         if "not found" in error_msg.lower() or "ToolOutputSummarizer" in error_msg:
-            print(
-                "❌ ToolOutputSummarizer tool is not available. This indicates the output_summarization tools are not loaded."
+            logger.warning(
+                "❌ ToolOutputSummarizer tool is not available. This indicates "
+                "the output_summarization tools are not loaded."
             )
-            print(
-                "   Please ensure the SMCP server is started with hooks enabled and the output_summarization category is loaded."
+            logger.warning(
+                "   Please ensure the SMCP server is started with hooks "
+                "enabled and the output_summarization category is loaded."
             )
 
         return ""
@@ -281,5 +335,5 @@ def _merge_summaries(
             return combined_summaries
 
     except Exception as e:
-        print(f"⚠️ Error merging summaries: {str(e)}")
+        logger.warning(f"⚠️ Error merging summaries: {str(e)}")
         return combined_summaries

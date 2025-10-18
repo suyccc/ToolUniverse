@@ -133,9 +133,10 @@ class TestToolUniverseCoreIntegration:
         test_key = "test_cache_key"
         test_value = {"result": "cached_data"}
         
-        self.tu._cache[test_key] = test_value
-        assert test_key in self.tu._cache
-        assert self.tu._cache[test_key] == test_value
+        self.tu._cache.set(test_key, test_value)
+        cached_result = self.tu._cache.get(test_key)
+        assert cached_result is not None
+        assert cached_result == test_value
         
         # Clear cache
         self.tu.clear_cache()

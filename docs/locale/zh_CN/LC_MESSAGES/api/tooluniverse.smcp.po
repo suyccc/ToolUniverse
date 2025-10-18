@@ -623,6 +623,8 @@ msgstr "用于工具执行的最大并发工作线程数。较高的值允许更
 #: c1166a4557924c85a30e10ac981bead5 of tooluniverse.smcp.SMCP:120
 msgid "hooks_enabled"
 msgstr ""
+"hooks_enabled  \n"
+"挂钩启用"
 
 #: 4d64bf079cd14bcc98b2461a8d9c2da9 of tooluniverse.smcp.SMCP:-1
 msgid "bool, default False"
@@ -659,7 +661,7 @@ msgstr ""
 
 #: db679c3b37444dbc853333db749a2d0a of tooluniverse.smcp.SMCP:130
 msgid "hook_type"
-msgstr ""
+msgstr "钩子类型"
 
 #: 62bd0dd495c849d5b5c6614abace16a6 of tooluniverse.smcp.SMCP:131
 msgid ""
@@ -1069,7 +1071,7 @@ msgstr ""
 #: cfa780cfe8b44c52a831b9db40757cb8 of
 #: tooluniverse.smcp.SMCP._handle_tools_find:9
 msgid "request_id"
-msgstr ""
+msgstr "请求ID"
 
 #: 465f26dfba39453d97037f4c8addde35 97061ec211c44b15a6411cd717ae72df
 #: 9cba7558687942789b812f513355ac03 d519093c5ee0402a8797c17243b71316 of
@@ -1307,6 +1309,8 @@ msgstr "返回工具的最大数量"
 #: tooluniverse.smcp.SMCP._perform_tool_search:14
 msgid "use_advanced_search"
 msgstr ""
+"use_advanced_search  \n"
+"使用高级搜索"
 
 #: 71a38375a351494c9eb2add0ae8eed49 of
 #: tooluniverse.smcp.SMCP._perform_tool_search:-1
@@ -1978,6 +1982,8 @@ msgstr "返回值：包含已发现工具和搜索元数据的 JSON 字符串"
 #: tooluniverse.smcp.SMCP._add_search_tools:22
 msgid "search_tools:"
 msgstr ""
+"search_tools:  \n"
+"搜索工具"
 
 #: f85c91af6e3c4934b9de7c0e91a2f6af of
 #: tooluniverse.smcp.SMCP._add_search_tools:23
@@ -2805,7 +2811,7 @@ msgstr "异步函数与复杂参数：```python async def process_data("
 #: fc628e8ea04343b1a25ddfb0a437aa9f of
 #: tooluniverse.smcp.SMCP.add_custom_tool:58
 msgid "data: List[Dict[str, Any]], processing_type: str = \"standard\""
-msgstr ""
+msgstr "数据: List[Dict[str, Any]], 处理类型: str = \"标准\""
 
 #: 97c7012611384eb59f4ccffb6e4ccd1f of
 #: tooluniverse.smcp.SMCP.add_custom_tool:60

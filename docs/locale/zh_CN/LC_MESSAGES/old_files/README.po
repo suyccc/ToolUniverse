@@ -311,7 +311,7 @@ msgstr "测试文件 / 测试文件"
 
 #: ../../old_files/README.md:40 e839548ff5d249c48070dd33f80b0c9d
 msgid "`test_switcher.html` - 语言切换器测试页面"
-msgstr ""
+msgstr "`test_switcher.html` - 语言切换器测试页"
 
 #: ../../old_files/README.md:42 0751bc85210a4d7b9408fe0c58ee855b
 msgid "文件统计 / File Statistics"

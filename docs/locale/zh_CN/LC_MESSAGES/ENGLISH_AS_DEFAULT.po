@@ -140,7 +140,7 @@ msgstr "这样可以避免文件重复，同时提供友好的URL。"
 
 #: ../../ENGLISH_AS_DEFAULT.md:108 a5e8e9e4dbd2465db669b8cb2947bb79
 msgid "📝 测试命令"
-msgstr ""
+msgstr "📝 测试指令"
 
 #: ../../ENGLISH_AS_DEFAULT.md:129 0ab4a07f04c64e5aa94948c7fc453780
 msgid "❓ 常见问题"

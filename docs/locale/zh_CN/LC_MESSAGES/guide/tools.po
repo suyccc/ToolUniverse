@@ -586,7 +586,7 @@ msgstr ""
 
 #: ../../guide/tools.rst:445 478bef82f9c34f1aa54d9e2e5e316899
 msgid "HumanBase"
-msgstr ""
+msgstr "人类数据库"
 
 #: ../../guide/tools.rst:447 29c4d97f55bb416685816fa4d5b8cb70
 msgid "Tissue-specific gene networks."

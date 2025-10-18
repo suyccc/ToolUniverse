@@ -1400,7 +1400,7 @@ msgstr ""
 #: tooluniverse.mcp_integration.discover_mcp_tools:9
 #: tooluniverse.mcp_integration.load_mcp_tools:8
 msgid "server_urls"
-msgstr ""
+msgstr "服务器_URLs"
 
 #: 19db8d2c4c8949edbfee03e5cb9db0fe 9a0f98c4b26943fd8c72655bd9790ad8 of
 #: tooluniverse.mcp_integration.discover_mcp_tools:-1

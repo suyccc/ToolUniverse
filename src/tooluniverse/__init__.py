@@ -1,39 +1,54 @@
 from importlib.metadata import version
+import os
 import warnings
 from typing import Any, Optional, List
+
 from .execute_function import ToolUniverse
 from .base_tool import BaseTool
 from .default_config import default_tool_files
+from .tool_registry import register_tool, get_tool_registry
+
+_LIGHT_IMPORT = os.getenv("TOOLUNIVERSE_LIGHT_IMPORT", "false").lower() in (
+    "true",
+    "1",
+    "yes",
+)
 
 # Version information - read from package metadata or pyproject.toml
 __version__ = version("tooluniverse")
-from .tool_registry import register_tool, get_tool_registry
 
 # Import tools with graceful fallback
-try:
-    from . import tools
+if not _LIGHT_IMPORT:
+    try:
+        from . import tools
 
-    _TOOLS_AVAILABLE = True
-except ImportError:
+        _TOOLS_AVAILABLE = True
+    except ImportError:
+        _TOOLS_AVAILABLE = False
+        tools = None  # type: ignore
+else:
     _TOOLS_AVAILABLE = False
     tools = None  # type: ignore
 
 # Check if lazy loading is enabled
-# LAZY_LOADING_ENABLED = os.getenv('TOOLUNIVERSE_LAZY_LOADING', 'true').lower() in ('true', '1', 'yes')
+# LAZY_LOADING_ENABLED = os.getenv('TOOLUNIVERSE_LAZY_LOADING', 'true').lower() in (
+#     'true', '1', 'yes'
+# )
 LAZY_LOADING_ENABLED = (
     False  # LAZY LOADING DISABLED BECAUSE IT'S STILL UNDER DEVELOPMENT
 )
 
 # Import MCP functionality
-try:
-    from .mcp_integration import _patch_tooluniverse
+if not _LIGHT_IMPORT:
+    try:
+        from .mcp_integration import _patch_tooluniverse
 
-    # Automatically patch ToolUniverse with MCP methods
-    _patch_tooluniverse()
+        # Automatically patch ToolUniverse with MCP methods
+        _patch_tooluniverse()
 
-except ImportError:
-    # MCP functionality not available
-    pass
+    except ImportError:
+        # MCP functionality not available
+        pass
 
 # Import SMCP with graceful fallback and consistent signatures for type checking
 try:
@@ -163,13 +178,21 @@ CellosaurusSearchTool: Any
 CellosaurusQueryConverterTool: Any
 CellosaurusGetCellLineInfoTool: Any
 TextEmbeddingTool: Any
-if not LAZY_LOADING_ENABLED:
+if not _LIGHT_IMPORT and not LAZY_LOADING_ENABLED:
     # Import all tool classes immediately (old behavior) with warning suppression  # noqa: E501
     with warnings.catch_warnings():
         warnings.filterwarnings("ignore", category=DeprecationWarning)
         warnings.filterwarnings("ignore", category=RuntimeWarning)
         warnings.filterwarnings("ignore", category=UserWarning)
         warnings.filterwarnings("ignore", category=FutureWarning)
+        # Suppress specific third-party warnings
+        warnings.filterwarnings("ignore", category=UserWarning, module="hyperopt")
+        warnings.filterwarnings(
+            "ignore", category=DeprecationWarning, module="pkg_resources"
+        )
+        warnings.filterwarnings(
+            "ignore", category=RuntimeWarning, module="importlib._bootstrap"
+        )
 
         from .restful_tool import MonarchTool, MonarchDiseasesForMultiplePhenoTool
         from .ctg_tool import ClinicalTrialsSearchTool, ClinicalTrialsDetailsTool

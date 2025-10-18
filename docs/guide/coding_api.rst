@@ -42,7 +42,13 @@ Caching
 .. code-block:: python
 
     from tooluniverse.tools import UniProt_get_entry_by_accession
-    
+
+    # Cache results (enabled by default)
+    result = UniProt_get_entry_by_accession(
+        accession="P05067",
+        use_cache=True  # explicit flag keeps code self-documenting
+    )
+
     # Cache results
     result = UniProt_get_entry_by_accession(
         accession="P05067",

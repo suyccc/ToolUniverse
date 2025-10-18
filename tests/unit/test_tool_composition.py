@@ -187,23 +187,23 @@ class TestToolComposition(unittest.TestCase):
         """Test workflow optimization with real ToolUniverse."""
         # Test caching mechanism
         cache_key = "test_query"
-        if cache_key in self.tu._cache:
-            result = self.tu._cache[cache_key]
-        else:
+        result = self.tu._cache.get(cache_key)
+        if result is None:
             try:
                 result = self.tu.run({
                     "name": "UniProt_get_entry_by_accession",
                     "arguments": {"accession": "P05067"}
                 })
-                self.tu._cache[cache_key] = result
+                self.tu._cache.set(cache_key, result)
             except Exception:
                 # Expected if API key not configured
                 result = {"error": "API key not configured"}
-                self.tu._cache[cache_key] = result
+                self.tu._cache.set(cache_key, result)
         
         # Verify caching worked
-        self.assertIn(cache_key, self.tu._cache)
-        self.assertEqual(self.tu._cache[cache_key], result)
+        cached_result = self.tu._cache.get(cache_key)
+        self.assertIsNotNone(cached_result)
+        self.assertEqual(cached_result, result)
 
     def test_workflow_data_flow_real(self):
         """Test data flow between tools with real ToolUniverse calls."""

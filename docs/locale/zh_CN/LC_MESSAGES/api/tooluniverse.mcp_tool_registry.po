@@ -51,7 +51,7 @@ msgstr ""
 
 #: 84d8cab7ab6d4caaa4fd4cc0f9e52d57 of tooluniverse.mcp_tool_registry:13
 msgid "@register_mcp_tool("
-msgstr ""
+msgstr "@注册_mcp_工具("
 
 #: 65281bdd35ca4c62aa708e2f8b4a8f25 of tooluniverse.mcp_tool_registry:14
 msgid "tool_type_name=\"my_analysis_tool\", config={"

@@ -120,7 +120,7 @@ msgstr ""
 
 #: ../../reference/data_sources.rst:24 c6adbac282b84536aa1d7f9efd510271
 msgid "**Europe PMC** - `Europe PMC <https://europepmc.org/>`_"
-msgstr ""
+msgstr "**欧洲PMC** - `欧洲PMC <https://europepmc.org/>`_"
 
 #: ../../reference/data_sources.rst:25 eaea59ecd23a4176b018543c1042ccac
 msgid "**FDA (FAERS)** - `FDA FAERS <https://open.fda.gov/>`_"

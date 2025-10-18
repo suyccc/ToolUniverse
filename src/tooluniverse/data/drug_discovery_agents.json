@@ -48,13 +48,11 @@
       "properties": {
         "disease_name": {
           "type": "string",
-          "description": "Name of the disease",
-          "required": true
+          "description": "Name of the disease"
         },
         "targets": {
           "type": "string",
-          "description": "List of therapeutic targets (comma-separated)",
-          "required": true
+          "description": "List of therapeutic targets (comma-separated)"
         },
         "context": {
           "type": "string",
@@ -90,13 +88,11 @@
       "properties": {
         "compounds": {
           "type": "string",
-          "description": "List of compounds to analyze (comma-separated)",
-          "required": true
+          "description": "List of compounds to analyze (comma-separated)"
         },
         "admet_data": {
           "type": "string",
-          "description": "ADMET data from computational tools to analyze",
-          "required": true
+          "description": "ADMET data from computational tools to analyze"
         },
         "disease_context": {
           "type": "string",
@@ -131,8 +127,7 @@
       "properties": {
         "compounds": {
           "type": "string",
-          "description": "List of compounds to analyze for interactions (comma-separated)",
-          "required": true
+          "description": "List of compounds to analyze for interactions (comma-separated)"
         },
         "patient_context": {
           "type": "string",
@@ -167,13 +162,11 @@
       "properties": {
         "topic": {
           "type": "string",
-          "description": "Research topic or question",
-          "required": true
+          "description": "Research topic or question"
         },
         "literature_data": {
           "type": "string",
-          "description": "Literature findings or abstracts to synthesize",
-          "required": true
+          "description": "Literature findings or abstracts to synthesize"
         },
         "focus_area": {
           "type": "string",
@@ -210,8 +203,7 @@
       "properties": {
         "compounds": {
           "type": "string",
-          "description": "List of compounds to optimize (comma-separated)",
-          "required": true
+          "description": "List of compounds to optimize (comma-separated)"
         },
         "admet_data": {
           "type": "string",
@@ -257,13 +249,11 @@
       "properties": {
         "drug_name": {
           "type": "string",
-          "description": "Name of the drug candidate",
-          "required": true
+          "description": "Name of the drug candidate"
         },
         "indication": {
           "type": "string",
-          "description": "Disease indication",
-          "required": true
+          "description": "Disease indication"
         },
         "preclinical_data": {
           "type": "string",

@@ -305,9 +305,9 @@ class TestCriticalErrorHandling(unittest.TestCase):
         # Test cache operations under stress
         self.tu.clear_cache()
         
-        # Add many items to cache
+        # Add many items to cache using the proper API
         for i in range(100):
-            self.tu._cache[f"item_{i}"] = {"data": f"value_{i}"}
+            self.tu._cache.set(f"item_{i}", {"data": f"value_{i}"})
         
         # Verify cache operations
         self.assertEqual(len(self.tu._cache), 100)

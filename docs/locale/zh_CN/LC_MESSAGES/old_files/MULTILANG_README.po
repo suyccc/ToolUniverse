@@ -42,7 +42,7 @@ msgstr "✅ **浮动语言切换器** - 位于页面右下角，随时切换语�
 
 #: ../../old_files/MULTILANG_README.md:8 802443474d6b41e28b6d0249a941f336
 msgid "✅ **独立语言选择页** - 优雅的语言选择界面"
-msgstr ""
+msgstr "✅ **独立语言选择页** - 提供优雅的语言选择界面"
 
 #: ../../old_files/MULTILANG_README.md:9 d84545e9fb2147edbe7feba2ac8fc50f
 msgid "✅ **深色/浅色模式** - 自动适配系统主题"
@@ -247,7 +247,7 @@ msgstr ""
 
 #: ../../old_files/MULTILANG_README.md:169 ec4ed685dda24a8a9c8ab136953cac53
 msgid "❓ 参考资料"
-msgstr ""
+msgstr "❓ 参考文档"
 
 #: ../../old_files/MULTILANG_README.md:171 30fcf6654549424b828e95c444f99bfe
 msgid "待翻译"
@@ -263,7 +263,7 @@ msgstr "☐ `quickstart.po` - 快速入门"
 
 #: ../../old_files/MULTILANG_README.md:176 d3732823055144029606dcf7499d42c3
 msgid "☐ `installation.po` - 安装指南"
-msgstr ""
+msgstr "☐ `installation.po` - 安装说明"
 
 #: ../../old_files/MULTILANG_README.md:177 5a81a533d9664548a5a4fd9fad9a7756
 msgid "☐ `getting_started.po` - 入门教程"
@@ -357,7 +357,7 @@ msgstr "问：翻译后看不到效果？"
 
 #: ../../old_files/MULTILANG_README.md:226 f3f30969f1544414a78f6da701b2608b
 msgid "A: 确保："
-msgstr ""
+msgstr "确保："
 
 #: ../../old_files/MULTILANG_README.md:227 caf663155130426cad39d882e5347250
 msgid "`.po` 文件已保存"
@@ -433,7 +433,7 @@ msgstr "[ ] 添加更多语言（如日语、韩语等）"
 
 #: ../../old_files/MULTILANG_README.md:289 343ebde3fab94928a4b4c6d5d3393bfb
 msgid "[ ] 自动化翻译工作流"
-msgstr ""
+msgstr "[ ] 自动化翻译工作流程"
 
 #: ../../old_files/MULTILANG_README.md:290 4e5986cf530e46a68928213cb981838b
 msgid "[ ] CI/CD 集成"
@@ -441,7 +441,7 @@ msgstr ""
 
 #: ../../old_files/MULTILANG_README.md:291 e5d437799a8d4cfc9deb5d608d9deae9
 msgid "[ ] 翻译进度追踪"
-msgstr ""
+msgstr "[ ] 翻译进度跟踪"
 
 #: ../../old_files/MULTILANG_README.md:293 4884a8c5a79b4bd5bb9c011436b24f32
 msgid "💡 贡献"

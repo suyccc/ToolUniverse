@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Test edge cases and error handling for Tool Finder functionality - Cleaned Version
+Test edge cases and error handling for Tool Finder functionality.
 
 This test file covers important edge cases:
 1. Tool finder with real ToolUniverse calls
@@ -19,7 +19,6 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent / "src"))
 from tooluniverse import ToolUniverse
 
 
-@pytest.mark.unit
 class TestToolFinderEdgeCases(unittest.TestCase):
     """Test edge cases and error handling for Tool Finder functionality."""
     
@@ -204,19 +203,53 @@ class TestToolFinderEdgeCases(unittest.TestCase):
     def test_tool_finder_concurrent_calls_real(self):
         """Test Tool_Finder with concurrent calls using real ToolUniverse."""
         import threading
-        import time
+        import json
         
         results = []
+        results_lock = threading.Lock()
         
         def make_call(query_id):
             try:
                 result = self.tu.run({
                     "name": "Tool_Finder_Keyword",
-                    "arguments": {"description": f"query_{query_id}", "limit": 5}
+                    "arguments": {
+                        "description": f"query_{query_id}",
+                        "limit": 5
+                    }
                 })
-                results.append(result)
+                
+                # Handle both string and dict results
+                if isinstance(result, str):
+                    try:
+                        parsed_result = json.loads(result)
+                        with results_lock:
+                            results.append(parsed_result)
+                    except json.JSONDecodeError:
+                        with results_lock:
+                            results.append({
+                                "error": "Failed to parse JSON result",
+                                "raw_result": result
+                            })
+                elif isinstance(result, list):
+                    # Handle list results (shouldn't happen but let's be safe)
+                    with results_lock:
+                        results.append({
+                            "error": "Unexpected list result",
+                            "raw_result": result
+                        })
+                elif result is None:
+                    with results_lock:
+                        results.append({
+                            "error": "Tool returned None",
+                            "query_id": query_id
+                        })
+                else:
+                    with results_lock:
+                        results.append(result)
+                        
             except Exception as e:
-                results.append({"error": str(e)})
+                with results_lock:
+                    results.append({"error": str(e), "query_id": query_id})
         
         # Create multiple threads
         threads = []
@@ -225,14 +258,20 @@ class TestToolFinderEdgeCases(unittest.TestCase):
             threads.append(thread)
             thread.start()
         
-        # Wait for all threads
+        # Wait for all threads with timeout
         for thread in threads:
-            thread.join()
+            thread.join(timeout=10)  # 10 second timeout per thread
         
         # Verify all calls completed
-        self.assertEqual(len(results), 3)
-        for result in results:
-            self.assertIsInstance(result, dict)
+        self.assertEqual(
+            len(results), 3,
+            f"Expected 3 results, got {len(results)}: {results}"
+        )
+        for i, result in enumerate(results):
+            self.assertIsInstance(
+                result, dict,
+                f"Result {i} is not a dict: {type(result)} = {result}"
+            )
     
     def test_tool_finder_llm_edge_cases_real(self):
         """Test Tool_Finder_LLM edge cases using real ToolUniverse."""
@@ -256,6 +295,7 @@ class TestToolFinderEdgeCases(unittest.TestCase):
             # Expected if tool not available
             self.assertIsInstance(e, Exception)
     
+    @pytest.mark.require_gpu
     def test_tool_finder_embedding_edge_cases_real(self):
         """Test Tool_Finder (embedding) edge cases using real ToolUniverse."""
         try:

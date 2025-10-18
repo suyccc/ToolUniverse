@@ -21,6 +21,7 @@ Core Concepts
 * **📡 MCP Support** → :doc:`mcp_support` - Model Context Protocol integration and server setup
 * **🔊 Streaming Tools** → :doc:`streaming_tools` - Real-time streaming output and custom tool integration
 * **📝 Logging** → :doc:`logging` - Comprehensive logging configuration and debugging
+* **🗃️ Result Caching** → :doc:`cache_system` - Configure in-memory and persistent caches for tool results
 * **🔗 Interaction Protocol** → :doc:`interaction_protocol` - Understanding tool interaction patterns
 
 Tool Discovery & Usage

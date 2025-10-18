@@ -273,9 +273,13 @@ if command -v sphinx-apidoc >/dev/null 2>&1; then
     # Display discovered module information
     # ===========================================
     echo -e "\n${PURPLE}📋 Discovered modules:${NC}"
-    find api -name "*.rst" | sed 's|api/||' | sed 's|\.rst$||' | sort | head -20 | while read -r module; do
+    # Use a temporary file to avoid broken pipe issues in CI
+    TEMP_MODULES=$(mktemp)
+    find api -name "*.rst" | sed 's|api/||' | sed 's|\.rst$||' | sort > "$TEMP_MODULES"
+    head -20 "$TEMP_MODULES" | while read -r module; do
         echo -e "   📄 ${module}"
     done
+    rm -f "$TEMP_MODULES"
     
     # If module count exceeds 20, show remaining count
     REMAINING=$(find api -name "*.rst" | wc -l | tr -d ' ')
@@ -308,10 +312,10 @@ else
 fi
 
 
-OUTPUT_DIR="_build/html"
 # Ensure we're in the docs directory
 SCRIPT_DIR="$(dirname "$0")"
 cd "$SCRIPT_DIR"
+OUTPUT_DIR="_build/html"
 
 rm -rf "$OUTPUT_DIR"
 mkdir -p "$OUTPUT_DIR"
@@ -577,13 +581,21 @@ fi
 # Final verification
 # ===========================================
 echo -e "\n${BLUE}🔍 Final verification...${NC}"
+echo -e "${YELLOW}Current directory: $(pwd)${NC}"
+echo -e "${YELLOW}Output directory: $OUTPUT_DIR${NC}"
+echo -e "${YELLOW}Output directory exists: $([ -d "$OUTPUT_DIR" ] && echo "Yes" || echo "No")${NC}"
+
 if [ ! -d "$OUTPUT_DIR" ]; then
   echo -e "${RED}❌ Output directory $OUTPUT_DIR not found!${NC}"
+  echo -e "${YELLOW}Contents of current directory:${NC}"
+  ls -la
   exit 1
 fi
 
 if [ ! -f "$OUTPUT_DIR/index.html" ]; then
   echo -e "${RED}❌ Root index.html not found!${NC}"
+  echo -e "${YELLOW}Contents of output directory:${NC}"
+  ls -la "$OUTPUT_DIR"
   exit 1
 fi
 

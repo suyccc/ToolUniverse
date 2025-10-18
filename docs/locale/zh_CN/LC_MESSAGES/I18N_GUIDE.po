@@ -182,7 +182,7 @@ msgstr "reStructuredText 指令保持不变"
 
 #: ../../I18N_GUIDE.md:152 18939742b3bf4ed39ab7676e9c092d8b
 msgid "代码块不变"
-msgstr ""
+msgstr "代码块保持不变"
 
 #: ../../I18N_GUIDE.md:154 76a9bf43dea44aa5ae2a09d09df4d025
 msgid "3. 使用翻译工具"

@@ -6,6 +6,7 @@ Tool for visualizing 3D molecular structures using RDKit and py3Dmol.
 Supports SMILES, MOL files, SDF content, and various visualization styles.
 """
 
+import warnings
 from typing import Any, Dict
 from .visualization_tool import VisualizationTool
 from .tool_registry import register_tool
@@ -18,9 +19,14 @@ class Molecule3DTool(VisualizationTool):
     def run(self, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Generate 3D molecular structure visualization."""
         try:
-            import py3Dmol
-            from rdkit import Chem
-            from rdkit.Chem import AllChem
+            # Suppress RDKit RuntimeWarnings about converter registration
+            with warnings.catch_warnings():
+                warnings.filterwarnings(
+                    "ignore", category=RuntimeWarning, module="importlib._bootstrap"
+                )
+                import py3Dmol
+                from rdkit import Chem
+                from rdkit.Chem import AllChem
 
             # Extract parameters
             smiles = arguments.get("smiles")

@@ -33,6 +33,11 @@ import os
 import time
 import hashlib
 import warnings
+import threading
+from pathlib import Path
+from contextlib import nullcontext
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional
 from .utils import read_json_list, evaluate_function_call, extract_function_call_json
 from .exceptions import (
@@ -58,6 +63,7 @@ from .logging_config import (
     error,
     set_log_level,
 )
+from .cache.result_cache_manager import ResultCacheManager
 from .output_hook import HookManager
 from .default_config import default_tool_files, get_default_hook_config
 
@@ -91,6 +97,26 @@ else:
     debug(f"Full tool registry initialized with {len(tool_type_mappings)} tools")
 for _tool_name, _tool_class in sorted(tool_type_mappings.items()):
     debug(f"  - {_tool_name}: {_tool_class.__name__}")
+
+
+@dataclass
+class _BatchCacheInfo:
+    namespace: str
+    version: str
+    cache_key: str
+
+
+@dataclass
+class _BatchJob:
+    signature: str
+    call: Dict[str, Any]
+    function_name: str
+    arguments: Dict[str, Any]
+    indices: List[int] = field(default_factory=list)
+    tool_instance: Any = None
+    cache_info: Optional[_BatchCacheInfo] = None
+    cache_key_composed: Optional[str] = None
+    skip_execution: bool = False
 
 
 class ToolCallable:
@@ -146,7 +172,38 @@ class ToolNamespace:
         """Return a ToolCallable for the requested tool name."""
         if name in self.engine.all_tool_dict:
             return ToolCallable(self.engine, name)
-        raise AttributeError(f"Tool '{name}' not found")
+
+        # Attempt a targeted on-demand load for this tool name
+        try:
+            self.engine.load_tools(include_tools=[name])
+        except Exception:
+            # Ignore load errors here; we'll surface a clearer error below if still missing
+            pass
+        if name in self.engine.all_tool_dict:
+            return ToolCallable(self.engine, name)
+
+        # As a fallback, force full discovery once
+        try:
+            self.engine.force_full_discovery()
+        except Exception:
+            # Ignore discovery errors; report consolidated reason below
+            pass
+        if name in self.engine.all_tool_dict:
+            return ToolCallable(self.engine, name)
+
+        # Build a helpful reason summary
+        try:
+            status = self.engine.get_lazy_loading_status()
+            reason = (
+                f"after targeted load and full discovery; "
+                f"lazy_loading_enabled={status.get('lazy_loading_enabled')}, "
+                f"loaded_tools_count={status.get('loaded_tools_count')}, "
+                f"immediately_available_tools={status.get('immediately_available_tools')}"
+            )
+        except Exception:
+            reason = "after targeted load and full discovery"
+
+        raise AttributeError(f"Tool '{name}' not found ({reason})")
 
     def __len__(self) -> int:
         """Return the number of available tools."""
@@ -260,9 +317,39 @@ class ToolUniverse:
             self.hook_manager = None
             self.logger.debug("Output hooks disabled")
 
-        # Initialize new attributes for enhanced functionality
-        self._cache = {}  # Simple cache for tool results
-        self._cache_size = int(os.getenv("TOOLUNIVERSE_CACHE_SIZE", "100"))
+        # Initialize caching configuration
+        cache_enabled = os.getenv("TOOLUNIVERSE_CACHE_ENABLED", "true").lower() in (
+            "true",
+            "1",
+            "yes",
+        )
+        persistence_enabled = os.getenv(
+            "TOOLUNIVERSE_CACHE_PERSIST", "true"
+        ).lower() in ("true", "1", "yes")
+        memory_size = int(os.getenv("TOOLUNIVERSE_CACHE_MEMORY_SIZE", "256"))
+        default_ttl_env = os.getenv("TOOLUNIVERSE_CACHE_DEFAULT_TTL")
+        default_ttl = int(default_ttl_env) if default_ttl_env else None
+        singleflight_enabled = os.getenv(
+            "TOOLUNIVERSE_CACHE_SINGLEFLIGHT", "true"
+        ).lower() in ("true", "1", "yes")
+
+        cache_path = os.getenv("TOOLUNIVERSE_CACHE_PATH")
+        if not cache_path and persistence_enabled:
+            base_dir = os.getenv("TOOLUNIVERSE_CACHE_DIR")
+            if not base_dir:
+                base_dir = os.path.join(str(Path.home()), ".tooluniverse")
+            os.makedirs(base_dir, exist_ok=True)
+            cache_path = os.path.join(base_dir, "cache.sqlite")
+
+        self.cache_manager = ResultCacheManager(
+            memory_size=memory_size,
+            persistent_path=cache_path if persistence_enabled else None,
+            enabled=cache_enabled,
+            persistence_enabled=persistence_enabled,
+            singleflight=singleflight_enabled,
+            default_ttl=default_ttl,
+        )
+
         self._strict_validation = os.getenv(
             "TOOLUNIVERSE_STRICT_VALIDATION", "false"
         ).lower() in ("true", "1", "yes")
@@ -1610,6 +1697,198 @@ class ToolUniverse:
         """
         return copy.deepcopy(self.all_tools)
 
+    def _execute_function_call_list(
+        self,
+        function_calls: List[Dict[str, Any]],
+        stream_callback=None,
+        use_cache: bool = False,
+        max_workers: Optional[int] = None,
+    ) -> List[Any]:
+        """Execute a list of function calls, optionally in parallel.
+
+        Args:
+            function_calls: Ordered list of function call dictionaries.
+            stream_callback: Optional streaming callback.
+            use_cache: Whether to enable cache lookups for each call.
+            max_workers: Maximum parallel workers; values <=1 fall back to sequential execution.
+
+        Returns:
+            List of results aligned with ``function_calls`` order.
+        """
+
+        if not function_calls:
+            return []
+
+        if stream_callback is not None and max_workers and max_workers > 1:
+            # Streaming multiple calls concurrently is ambiguous; fall back to sequential execution.
+            self.logger.warning(
+                "stream_callback is not supported with parallel batch execution; falling back to sequential mode"
+            )
+            max_workers = 1
+
+        jobs = self._build_batch_jobs(function_calls)
+        results: List[Any] = [None] * len(function_calls)
+
+        jobs_to_run = self._prime_batch_cache(jobs, use_cache, results)
+        if not jobs_to_run:
+            return results
+
+        self._execute_batch_jobs(
+            jobs_to_run,
+            results,
+            stream_callback=stream_callback,
+            use_cache=use_cache,
+            max_workers=max_workers,
+        )
+
+        return results
+
+    def _build_batch_jobs(
+        self, function_calls: List[Dict[str, Any]]
+    ) -> List[_BatchJob]:
+        signature_to_job: Dict[str, _BatchJob] = {}
+        jobs: List[_BatchJob] = []
+
+        for idx, call in enumerate(function_calls):
+            function_name = call.get("name", "")
+            arguments = call.get("arguments", {})
+            if not isinstance(arguments, dict):
+                arguments = {}
+
+            signature = json.dumps(
+                {"name": function_name, "arguments": arguments}, sort_keys=True
+            )
+
+            job = signature_to_job.get(signature)
+            if job is None:
+                job = _BatchJob(
+                    signature=signature,
+                    call=call,
+                    function_name=function_name,
+                    arguments=arguments,
+                )
+                signature_to_job[signature] = job
+                jobs.append(job)
+
+            job.indices.append(idx)
+
+        return jobs
+
+    def _prime_batch_cache(
+        self,
+        jobs: List[_BatchJob],
+        use_cache: bool,
+        results: List[Any],
+    ) -> List[_BatchJob]:
+        if not (
+            use_cache and self.cache_manager is not None and self.cache_manager.enabled
+        ):
+            return jobs
+
+        cache_requests: List[Dict[str, str]] = []
+        for job in jobs:
+            if not job.function_name:
+                continue
+
+            tool_instance = self._ensure_tool_instance(job)
+            if not tool_instance or not tool_instance.supports_caching():
+                continue
+
+            cache_key = tool_instance.get_cache_key(job.arguments or {})
+            cache_info = _BatchCacheInfo(
+                namespace=tool_instance.get_cache_namespace(),
+                version=tool_instance.get_cache_version(),
+                cache_key=cache_key,
+            )
+            job.cache_info = cache_info
+            job.cache_key_composed = self.cache_manager.compose_key(
+                cache_info.namespace, cache_info.version, cache_info.cache_key
+            )
+            cache_requests.append(
+                {
+                    "namespace": cache_info.namespace,
+                    "version": cache_info.version,
+                    "cache_key": cache_info.cache_key,
+                }
+            )
+
+        if cache_requests:
+            cache_hits = self.cache_manager.bulk_get(cache_requests)
+            if cache_hits:
+                for job in jobs:
+                    if job.cache_key_composed and job.cache_key_composed in cache_hits:
+                        cached_value = cache_hits[job.cache_key_composed]
+                        for idx in job.indices:
+                            results[idx] = cached_value
+                        job.skip_execution = True
+
+        return [job for job in jobs if not job.skip_execution]
+
+    def _execute_batch_jobs(
+        self,
+        jobs_to_run: List[_BatchJob],
+        results: List[Any],
+        *,
+        stream_callback,
+        use_cache: bool,
+        max_workers: Optional[int],
+    ) -> None:
+        if not jobs_to_run:
+            return
+
+        tool_semaphores: Dict[str, Optional[threading.Semaphore]] = {}
+
+        def run_job(job: _BatchJob):
+            semaphore = self._get_tool_semaphore(job, tool_semaphores)
+            if semaphore:
+                semaphore.acquire()
+            try:
+                result = self.run_one_function(
+                    job.call,
+                    stream_callback=stream_callback,
+                    use_cache=use_cache,
+                )
+            finally:
+                if semaphore:
+                    semaphore.release()
+
+            for idx in job.indices:
+                results[idx] = result
+
+        if max_workers and max_workers > 1:
+            with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                futures = [executor.submit(run_job, job) for job in jobs_to_run]
+                for future in as_completed(futures):
+                    future.result()
+        else:
+            for job in jobs_to_run:
+                run_job(job)
+
+    def _ensure_tool_instance(self, job: _BatchJob):
+        if job.tool_instance is None and job.function_name:
+            job.tool_instance = self._get_tool_instance(job.function_name, cache=True)
+        return job.tool_instance
+
+    def _get_tool_semaphore(
+        self,
+        job: _BatchJob,
+        tool_semaphores: Dict[str, Optional[threading.Semaphore]],
+    ) -> Optional[threading.Semaphore]:
+        if job.function_name not in tool_semaphores:
+            tool_instance = self._ensure_tool_instance(job)
+            limit = (
+                tool_instance.get_batch_concurrency_limit()
+                if tool_instance is not None
+                else 0
+            )
+            self.logger.debug("Batch concurrency for %s: %s", job.function_name, limit)
+            if limit and limit > 0:
+                tool_semaphores[job.function_name] = threading.Semaphore(limit)
+            else:
+                tool_semaphores[job.function_name] = None
+
+        return tool_semaphores[job.function_name]
+
     def run(
         self,
         fcall_str,
@@ -1617,6 +1896,8 @@ class ToolUniverse:
         verbose=True,
         format="llama",
         stream_callback=None,
+        use_cache: bool = False,
+        max_workers: Optional[int] = None,
     ):
         """
         Execute function calls from input string or data.
@@ -1647,14 +1928,18 @@ class ToolUniverse:
             message = ""  # Initialize message for cases where return_message=False
         if function_call_json is not None:
             if isinstance(function_call_json, list):
-                # return the function call+result message with call id.
+                # Execute the batch (optionally in parallel) and attach call IDs to maintain downstream compatibility.
+                batch_results = self._execute_function_call_list(
+                    function_call_json,
+                    stream_callback=stream_callback,
+                    use_cache=use_cache,
+                    max_workers=max_workers,
+                )
+
                 call_results = []
-                for i in range(len(function_call_json)):
-                    call_result = self.run_one_function(
-                        function_call_json[i], stream_callback=stream_callback
-                    )
+                for idx, call_result in enumerate(batch_results):
                     call_id = self.call_id_gen()
-                    function_call_json[i]["call_id"] = call_id
+                    function_call_json[idx]["call_id"] = call_id
                     call_results.append(
                         {
                             "role": "tool",
@@ -1673,7 +1958,9 @@ class ToolUniverse:
                 return revised_messages
             else:
                 return self.run_one_function(
-                    function_call_json, stream_callback=stream_callback
+                    function_call_json,
+                    stream_callback=stream_callback,
+                    use_cache=use_cache,
                 )
         else:
             error("Not a function call")
@@ -1710,81 +1997,127 @@ class ToolUniverse:
                 "error": f"Arguments must be a dictionary, got {type(arguments).__name__}"
             }
 
-        # Check cache first if enabled
-        if use_cache:
-            cache_key = self._make_cache_key(function_name, arguments)
-            if cache_key in self._cache:
-                self.logger.debug(f"Cache hit for {function_name}")
-                return self._cache[cache_key]
-
-        # Validate parameters if requested
-        if validate:
-            validation_error = self._validate_parameters(function_name, arguments)
-            if validation_error:
-                return self._create_dual_format_error(validation_error)
-
-        # Check function call format (existing validation)
-        check_status, check_message = self.check_function_call(function_call_json)
-        if check_status is False:
-            error_msg = "Invalid function call: " + check_message
-            return self._create_dual_format_error(
-                ToolValidationError(error_msg, details={"check_message": check_message})
-            )
-
-        # Execute the tool
         tool_instance = None
-        tool_arguments = arguments
-        try:
-            # Get or create tool instance (optimized to avoid duplication)
-            tool_instance = self._get_tool_instance(function_name, cache=True)
+        cache_namespace = None
+        cache_version = None
+        cache_key = None
+        composed_cache_key = None
+        cache_guard = nullcontext()
 
-            if tool_instance:
-                result, tool_arguments = self._execute_tool_with_stream(
-                    tool_instance, arguments, stream_callback, use_cache, validate
+        cache_enabled = (
+            use_cache and self.cache_manager is not None and self.cache_manager.enabled
+        )
+
+        if cache_enabled:
+            tool_instance = self._get_tool_instance(function_name, cache=True)
+            if tool_instance and tool_instance.supports_caching():
+                cache_namespace = tool_instance.get_cache_namespace()
+                cache_version = tool_instance.get_cache_version()
+                cache_key = self._make_cache_key(function_name, arguments)
+                composed_cache_key = self.cache_manager.compose_key(
+                    cache_namespace, cache_version, cache_key
                 )
+                cached_value = self.cache_manager.get(
+                    namespace=cache_namespace,
+                    version=cache_version,
+                    cache_key=cache_key,
+                )
+                if cached_value is not None:
+                    self.logger.debug(f"Cache hit for {function_name}")
+                    return cached_value
+                cache_guard = self.cache_manager.singleflight_guard(composed_cache_key)
             else:
-                error_msg = f"Tool '{function_name}' not found"
+                cache_enabled = False
+
+        with cache_guard:
+            if cache_enabled:
+                cached_value = self.cache_manager.get(
+                    namespace=cache_namespace,
+                    version=cache_version,
+                    cache_key=cache_key,
+                )
+                if cached_value is not None:
+                    self.logger.debug(
+                        f"Cache hit for {function_name} (after singleflight wait)"
+                    )
+                    return cached_value
+
+            # Validate parameters if requested
+            if validate:
+                validation_error = self._validate_parameters(function_name, arguments)
+                if validation_error:
+                    return self._create_dual_format_error(validation_error)
+
+            # Check function call format (existing validation)
+            check_status, check_message = self.check_function_call(function_call_json)
+            if check_status is False:
+                error_msg = "Invalid function call: " + check_message
                 return self._create_dual_format_error(
-                    ToolUnavailableError(
-                        error_msg,
-                        next_steps=[
-                            "Check tool name spelling",
-                            "Run tu.tools.refresh()",
-                        ],
+                    ToolValidationError(
+                        error_msg, details={"check_message": check_message}
                     )
                 )
-        except Exception as e:
-            # Classify and return structured error
-            classified_error = self._classify_exception(e, function_name, arguments)
-            return self._create_dual_format_error(classified_error)
 
-        # Apply output hooks if enabled
-        if self.hook_manager:
-            context = {
-                "tool_name": function_name,
-                "tool_type": (
-                    tool_instance.__class__.__name__
-                    if tool_instance is not None
-                    else "unknown"
-                ),
-                "execution_time": time.time(),
-                "arguments": tool_arguments,
-            }
-            result = self.hook_manager.apply_hooks(
-                result, function_name, tool_arguments, context
-            )
+            # Execute the tool
+            tool_arguments = arguments
+            try:
+                if tool_instance is None:
+                    tool_instance = self._get_tool_instance(function_name, cache=True)
 
-        # Cache result if enabled
-        if use_cache:
-            cache_key = self._make_cache_key(function_name, arguments)
-            self._cache[cache_key] = result
-            # Simple cache size management
-            if len(self._cache) > self._cache_size:
-                # Remove oldest entries (simple FIFO)
-                oldest_key = next(iter(self._cache))
-                del self._cache[oldest_key]
+                if tool_instance:
+                    result, tool_arguments = self._execute_tool_with_stream(
+                        tool_instance, arguments, stream_callback, use_cache, validate
+                    )
+                else:
+                    error_msg = f"Tool '{function_name}' not found"
+                    return self._create_dual_format_error(
+                        ToolUnavailableError(
+                            error_msg,
+                            next_steps=[
+                                "Check tool name spelling",
+                                "Run tu.tools.refresh()",
+                            ],
+                        )
+                    )
+            except Exception as e:
+                # Classify and return structured error
+                classified_error = self._classify_exception(e, function_name, arguments)
+                return self._create_dual_format_error(classified_error)
 
-        return result
+            # Apply output hooks if enabled
+            if self.hook_manager:
+                context = {
+                    "tool_name": function_name,
+                    "tool_type": (
+                        tool_instance.__class__.__name__
+                        if tool_instance is not None
+                        else "unknown"
+                    ),
+                    "execution_time": time.time(),
+                    "arguments": tool_arguments,
+                }
+                result = self.hook_manager.apply_hooks(
+                    result, function_name, tool_arguments, context
+                )
+
+            # Cache result if enabled
+            if cache_enabled and tool_instance and tool_instance.supports_caching():
+                if cache_key is None:
+                    cache_key = self._make_cache_key(function_name, arguments)
+                if cache_namespace is None:
+                    cache_namespace = tool_instance.get_cache_namespace()
+                if cache_version is None:
+                    cache_version = tool_instance.get_cache_version()
+                ttl = tool_instance.get_cache_ttl(result)
+                self.cache_manager.set(
+                    namespace=cache_namespace,
+                    version=cache_version,
+                    cache_key=cache_key,
+                    value=result,
+                    ttl=ttl,
+                )
+
+            return result
 
     def _execute_tool_with_stream(
         self, tool_instance, arguments, stream_callback, use_cache=False, validate=True
@@ -2051,10 +2384,41 @@ class ToolUniverse:
             f"Eager loading completed. {len(self.callable_functions)} tools cached."
         )
 
+    @property
+    def _cache(self):
+        """Access to the internal cache for testing purposes."""
+        if self.cache_manager:
+            return self.cache_manager.memory
+        return {}
+
     def clear_cache(self):
         """Clear the result cache."""
-        self._cache.clear()
+        if self.cache_manager:
+            self.cache_manager.clear()
         self.logger.info("Result cache cleared")
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Return cache statistics."""
+        if not self.cache_manager:
+            return {"enabled": False}
+        return self.cache_manager.stats()
+
+    def dump_cache(self, namespace: Optional[str] = None):
+        """Iterate over cached entries (persistent layer only)."""
+        if not self.cache_manager:
+            return iter([])
+        return self.cache_manager.dump(namespace=namespace)
+
+    def close(self):
+        """Release resources."""
+        if self.cache_manager:
+            self.cache_manager.close()
+
+    def __del__(self):
+        try:
+            self.close()
+        except Exception:
+            pass
 
     def get_tool_health(self, tool_name: str = None) -> dict:
         """Get health status for tool(s)."""

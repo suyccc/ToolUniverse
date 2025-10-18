@@ -57,7 +57,7 @@ jobs:
             --cov-report=xml \
             --cov-report=term \
             -n auto \
-            -m "not slow and not require_api_keys and not network" \
+            -m "not slow and not require_api_keys and not network and not require_gpu" \
             --ignore=tests/tools \
             --ignore=tests/examples \
             --ignore=tests/api

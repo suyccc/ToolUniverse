@@ -182,7 +182,7 @@ msgstr "reStructuredText 指令保持不变"
 
 #: ../../old_files/I18N_GUIDE.md:152 c34360fc42864a209760c158e1612e97
 msgid "代码块不变"
-msgstr ""
+msgstr "代码块保持不变"
 
 #: ../../old_files/I18N_GUIDE.md:154 17437b2416264031b6e527564cc88724
 msgid "3. 使用翻译工具"
@@ -250,6 +250,9 @@ msgstr ""
 #: ../../old_files/I18N_GUIDE.md:196 cb234daae5df4bfdbb7f9f08bc912861
 msgid "GitHub Pages"
 msgstr ""
+"GitHub Pages\n"
+"\n"
+"GitHub Pages 是一个静态站点托管服务，直接从您的 GitHub 仓库中获取文件并生成网站。通过简单的配置，您可以快速部署个人项目页面、组织页面或文档页面。"
 
 #: ../../old_files/I18N_GUIDE.md:212 d9bbcf789d4048a9af1fad074b0cab0c
 msgid "自定义域名语言路径"
@@ -295,11 +298,11 @@ msgstr "确保："
 
 #: ../../old_files/I18N_GUIDE.md:228 bd9b2d042a9b446e838f4b150b85aed2
 msgid ".po 文件已保存"
-msgstr ""
+msgstr ".po 文件已成功保存"
 
 #: ../../old_files/I18N_GUIDE.md:229 f5f588c3faa64347ae93070fd72efdf6
 msgid "运行 `make clean` 清理缓存"
-msgstr ""
+msgstr "运行 `make clean` 清除缓存"
 
 #: ../../old_files/I18N_GUIDE.md:230 17beea3436534ff4b4c0ef8794404e3c
 msgid "重新运行 `./build_multilang.sh`"
@@ -328,6 +331,9 @@ msgstr ""
 #: ../../old_files/I18N_GUIDE.md:258 ab65852776a243eab12e1ba67b863787
 msgid "🎉 开始翻译"
 msgstr ""
+"🎉 开始翻译\n"
+"\n"
+"上下文：文档"
 
 #: ../../old_files/I18N_GUIDE.md:260 df3766621f264a2a859b86304a4112ef
 msgid "准备好了吗？运行以下命令开始："
