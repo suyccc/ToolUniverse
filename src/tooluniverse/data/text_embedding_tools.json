@@ -31,13 +31,6 @@
     "required_api_keys": [
       "AZURE_OPENAI_API_KEY",
       "AZURE_OPENAI_ENDPOINT"
-    ],
-    "configs": {
-      "azure_openai_config": {
-        "api_key": "${AZURE_OPENAI_API_KEY}",
-        "azure_endpoint": "${AZURE_OPENAI_ENDPOINT}",
-        "api_version": "2024-10-21"
-      }
-    }
+    ]
   }
 ]
