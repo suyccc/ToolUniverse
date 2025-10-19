@@ -34,6 +34,7 @@ from __future__ import annotations
 import json
 import logging
 import os
+from contextlib import suppress
 from multiprocessing.managers import BaseManager, BaseProxy
 from threading import Lock
 from typing import Any, Callable, Dict, Iterable, List, Optional, Tuple
@@ -143,6 +144,7 @@ class RemoteVLLMEngine:
         self._logger = logging.getLogger(f"RemoteVLLMEngine[{model_name}]")
         self._logger.info("Starting vLLM engine with kwargs: %s", engine_kwargs)
         self._llm = LLM(model=model_name, **engine_kwargs)
+        self._shutdown = False
 
     def metadata(self) -> Dict[str, Any]:
         return {
@@ -192,6 +194,8 @@ class RemoteVLLMEngine:
         return_json: bool = False,
         json_schema: Optional[Dict[str, Any]] = None,
     ) -> List[Optional[str]]:
+        if self._shutdown:
+            raise RuntimeError("vLLM engine has been shut down")
         sampling_params = self._build_sampling_params(sampling_kwargs)
         sampling_params = self._apply_structured_outputs(sampling_params, return_json, json_schema)
 
@@ -221,11 +225,35 @@ class RemoteVLLMEngine:
                 results.append(generated_text)
         return results
 
+    def shutdown(self) -> None:
+        if self._shutdown:
+            return
+        self._shutdown = True
+        self._logger.info("Shutting down vLLM engine")
+        llm = getattr(self, "_llm", None)
+        if llm is None:
+            return
+
+        engine = getattr(llm, "llm_engine", None)
+        core = getattr(engine, "engine_core", None) if engine is not None else None
+        executor = getattr(engine, "model_executor", None) if engine is not None else None
+
+        for target in (engine, core, executor):
+            if target is None:
+                continue
+            shutdown_fn = getattr(target, "shutdown", None)
+            if callable(shutdown_fn):
+                with suppress(Exception):
+                    shutdown_fn()
+
+        with suppress(Exception):
+            delattr(self, "_llm")
+
 
 class RemoteVLLMEngineProxy(BaseProxy):
     """Proxy exposing safe methods of ``RemoteVLLMEngine`` to remote clients."""
 
-    _exposed_ = ("metadata", "generate")
+    _exposed_ = ("metadata", "generate", "shutdown")
 
     def metadata(self) -> Dict[str, Any]:
         return self._callmethod("metadata")
@@ -246,6 +274,9 @@ class RemoteVLLMEngineProxy(BaseProxy):
                 "json_schema": json_schema,
             },
         )
+
+    def shutdown(self) -> None:
+        self._callmethod("shutdown")
 
 
 class EngineRegistry:
@@ -273,6 +304,20 @@ class EngineRegistry:
         with self._lock:
             return list(self._engines.keys())
 
+    def shutdown_engine(self, key: str) -> None:
+        engine: Optional[RemoteVLLMEngine]
+        with self._lock:
+            engine = self._engines.pop(key, None)
+        if engine is not None:
+            engine.shutdown()
+
+    def shutdown_all(self) -> None:
+        with self._lock:
+            engines = list(self._engines.values())
+            self._engines.clear()
+        for engine in engines:
+            engine.shutdown()
+
 
 class VLLMEngineManager(BaseManager):
     """Custom manager exposing the engine registry."""
@@ -286,7 +331,7 @@ def _register_manager_class(manager_cls: type[BaseManager], registry_factory: Ca
     manager_cls.register(
         "get_registry",
         callable=registry_factory,
-        exposed=("register_engine", "get_engine", "list_keys"),
+        exposed=("register_engine", "get_engine", "list_keys", "shutdown_engine", "shutdown_all"),
         method_to_typeid={"get_engine": "RemoteVLLMEngine"},
     )
 
@@ -359,7 +404,10 @@ def run_engine_server(
     _logger.info("vLLM engine server running at %s with key '%s'", address, key)
     try:
         server.serve_forever()
+    except KeyboardInterrupt:  # pragma: no cover - interactive shutdown
+        _logger.info("Received interrupt; shutting down vLLM engine server")
     finally:  # pragma: no cover - server loops forever in normal operation
+        local_registry.shutdown_all()
         server.shutdown()
 
 

@@ -1,5 +1,6 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
+import atexit
 import os
 import time
 import json as _json
@@ -803,6 +804,7 @@ class VLLMClient(BaseLLMClient):
         self.model_name = model_name
         self.server_url = server_url
         self.logger = logger
+        self._cleanup_registered = False
 
         if specific_args is None:
             self._vllm_specific_args: Dict[str, Any] = {}
@@ -853,6 +855,8 @@ class VLLMClient(BaseLLMClient):
             self._engine_key = vllm_proxy.make_engine_key(
                 engine_id, self.model_name, engine_kwargs_for_key
             )
+            self._cleanup_registered = True
+            atexit.register(self._shutdown_on_exit)
 
     def _resolve_registry_settings(self) -> Tuple[Any, Any]:
         address = (
@@ -893,6 +897,29 @@ class VLLMClient(BaseLLMClient):
                 )
             self._engine_proxy = engine
         return self._engine_proxy
+
+    def _shutdown_on_exit(self) -> None:
+        if self.client:
+            return
+
+        try:
+            registry = self._registry_proxy or self._ensure_registry()
+        except Exception:
+            return
+
+        try:
+            registry.shutdown_engine(self._engine_key)
+        except Exception as exc:  # pragma: no cover - best-effort cleanup
+            try:
+                self.logger.debug(
+                    "Failed to shut down remote vLLM engine '%s': %s",
+                    self._engine_key,
+                    exc,
+                )
+            except Exception:
+                pass
+        finally:
+            self._engine_proxy = None
 
     def test_api(self) -> None:
         if self.client:

@@ -23,7 +23,7 @@ Keep one GPU-bound model alive and let many agentic tools share it.
 
 - Add `"api_type": "VLLM"` and point `"model_id"` at the shared checkpoint.
 - Set per-tool sampling knobs such as `"temperature"` and `"max_new_tokens"`; `AgenticTool` forwards them to `VLLMClient.infer_batch`, so different evaluators can reuse the same engine with different decoding behavior.
-- Connection details (engine launch, registry host/port, auth key) live in the orchestrator's `vllm` block. When `EvaluationOrchestrator` starts the proxy it exports `TOOLUNIVERSE_VLLM_MANAGER_*` for every worker, so the tool definition only needs model-scoped options.
+- Connection details (engine launch, registry host/port, auth key) should be injected by whatever process boots the registry. Export `TOOLUNIVERSE_VLLM_MANAGER_*` before instantiating tools so their configs only need model-scoped options.
 - Example:
   ```json
   {
@@ -54,3 +54,5 @@ Keep one GPU-bound model alive and let many agentic tools share it.
 - Start the server once per model; clients reconnect automatically.
 - Use `tooluniverse.vllm_proxy.list_remote_engines` to confirm registration.
 - Scale horizontally by launching more servers with distinct `engine_id` values.
+- Shut things down: once inference jobs finish, connect to the registry (`vllm_proxy.connect_registry(...)`) and call `shutdown_engine("<engine_id>")` (or `shutdown_all()`) so each engine exits cleanly.
+- After signalling shutdown, stop your launcher process (Ctrl+C for the simple script or `Process.join()` if you spawned it manually) to release the GPU workers and avoid orphan processes.
