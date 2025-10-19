@@ -2,6 +2,21 @@ from importlib.metadata import version
 import os
 import warnings
 from typing import Any, Optional, List
+import multiprocessing as mp
+
+# Ensure spawn start method is set early to avoid CUDA reinitialization in forked
+# subprocesses when vLLM or other CUDA-enabled libraries are used. This is a
+# minimal, defensive attempt to set the start method only if it isn't already
+# set to 'spawn'. Avoid forcing reinitialization in already-configured runtimes.
+os.environ["VLLM_WORKER_MULTIPROC_METHOD"] = "spawn"
+if mp.get_start_method(allow_none=True) != "spawn":
+    try:
+        mp.set_start_method("spawn", force=False)
+    except RuntimeError:
+        # If the start method was already set to something else earlier in the
+        # process (e.g., by a driver program), we can't change it here. We
+        # leave it as-is and allow downstream code to warn if necessary.
+        pass
 
 from .execute_function import ToolUniverse
 from .base_tool import BaseTool

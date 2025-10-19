@@ -21,6 +21,10 @@ Remote tools allow you to integrate external services, APIs, or tools running on
 - ✅ **Isolation**: Keep sensitive operations separate
 - ✅ **Performance**: Optimize for specific hardware requirements
 
+.. note::
+
+    Want to perform batch inference on agentic tools? See :doc:`../tools/remote/vllm_batch_inference` for the batch-inference setup.
+
 Quick Start
 -----------
 

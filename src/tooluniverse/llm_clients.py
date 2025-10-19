@@ -1,8 +1,15 @@
 from __future__ import annotations
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Tuple
 import os
 import time
 import json as _json
+
+try:
+    from vllm.sampling_params import StructuredOutputsParams
+except ImportError:
+    StructuredOutputsParams = None
+
+from . import vllm_proxy
 
 
 class BaseLLMClient:
@@ -43,6 +50,35 @@ class BaseLLMClient:
         )
         if result is not None:
             yield result
+
+    def infer_batch(
+        self,
+        messages_batch: List[List[Dict[str, str]]],
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+        return_json: bool,
+        custom_formats: Optional[List[Any]] = None,
+        json_schema: Optional[Dict[str, Any]] = None,
+        max_retries: int = 5,
+        retry_delay: int = 5,
+    ) -> List[Optional[str]]:
+        results: List[Optional[str]] = []
+        for idx, message_set in enumerate(messages_batch):
+            custom_format = None
+            if custom_formats is not None and idx < len(custom_formats):
+                custom_format = custom_formats[idx]
+            results.append(
+                self.infer(
+                    messages=message_set,
+                    temperature=temperature,
+                    max_tokens=max_tokens,
+                    return_json=return_json,
+                    custom_format=custom_format,
+                    max_retries=max_retries,
+                    retry_delay=retry_delay,
+                )
+            )
+        return results
 
 
 class AzureOpenAIClient(BaseLLMClient):
@@ -757,38 +793,129 @@ class OpenRouterClient(BaseLLMClient):
 
 
 class VLLMClient(BaseLLMClient):
-    def __init__(self, model_name: str, server_url: str, logger):
-        try:
-            from openai import OpenAI
-        except Exception as e:
-            raise RuntimeError("openai package not available for vLLM client") from e
-
-        if not server_url:
-            raise ValueError("VLLM_SERVER_URL must be provided")
-
+    def __init__(
+        self,
+        model_name: str,
+        server_url: Optional[str],
+        logger,
+        specific_args: Optional[Dict[str, Any]] = None,
+    ):
         self.model_name = model_name
-        # Ensure server_url ends with /v1 for OpenAI-compatible API
-        if not server_url.endswith("/v1"):
-            server_url = server_url.rstrip("/") + "/v1"
         self.server_url = server_url
         self.logger = logger
 
-        self.client = OpenAI(
-            api_key="EMPTY",
-            base_url=self.server_url,
+        if specific_args is None:
+            self._vllm_specific_args: Dict[str, Any] = {}
+        elif isinstance(specific_args, dict):
+            self._vllm_specific_args = specific_args.copy()
+        else:
+            self.logger.warning(
+                "Ignoring vllm_specific_args for model %s; expected dict but got %s.",
+                self.model_name,
+                type(specific_args).__name__,
+            )
+            self._vllm_specific_args = {}
+
+        # Only initialize OpenAI client if server_url is provided (for API-based inference)
+        if server_url:
+            try:
+                from openai import OpenAI
+            except Exception as e:
+                raise RuntimeError("openai package not available for vLLM client") from e
+
+            # Ensure server_url ends with /v1 for OpenAI-compatible API
+            if not server_url.endswith("/v1"):
+                server_url = server_url.rstrip("/") + "/v1"
+            self.server_url = server_url
+
+            self.client = OpenAI(
+                api_key="EMPTY",
+                base_url=self.server_url,
+            )
+            if self._vllm_specific_args:
+                self.logger.debug(
+                    "vLLM client configured for server mode; ensure remote server honours %s",
+                    self._vllm_specific_args,
+                )
+        else:
+            self.client = None
+            registry_address, registry_authkey = self._resolve_registry_settings()
+            self._registry_settings = (registry_address, registry_authkey)
+            self._registry_proxy = None
+            self._engine_proxy = None
+            reserved_keys = {"engine_id", "registry_address", "registry_authkey"}
+            engine_kwargs_for_key = {
+                key: value
+                for key, value in self._vllm_specific_args.items()
+                if key not in reserved_keys
+            }
+            engine_id = self._vllm_specific_args.get("engine_id")
+            self._engine_key = vllm_proxy.make_engine_key(
+                engine_id, self.model_name, engine_kwargs_for_key
+            )
+
+    def _resolve_registry_settings(self) -> Tuple[Any, Any]:
+        address = (
+            self._vllm_specific_args.get("registry_address")
+            or os.getenv("TOOLUNIVERSE_VLLM_MANAGER_ADDR")
         )
+        if address is None:
+            raise ValueError(
+                "No vLLM registry address provided. Set 'registry_address' in "
+                "vllm_specific_args or TOOLUNIVERSE_VLLM_MANAGER_ADDR."
+            )
+        authkey = (
+            self._vllm_specific_args.get("registry_authkey")
+            or os.getenv("TOOLUNIVERSE_VLLM_MANAGER_AUTHKEY")
+            or "tooluniverse"
+        )
+        return address, authkey
+
+    def _ensure_registry(self):
+        if self.client:
+            return None
+        if self._registry_proxy is None:
+            address, authkey = self._registry_settings
+            self._registry_proxy = vllm_proxy.connect_registry(address, authkey)
+        return self._registry_proxy
+
+    def _ensure_engine(self):
+        if self.client:
+            return None
+        if self._engine_proxy is None:
+            registry = self._ensure_registry()
+            engine = registry.get_engine(self._engine_key)
+            if engine is None:
+                available = registry.list_keys()
+                raise ValueError(
+                    f"No remote vLLM engine registered under key '{self._engine_key}'. "
+                    f"Available engines: {available}"
+                )
+            self._engine_proxy = engine
+        return self._engine_proxy
 
     def test_api(self) -> None:
-        test_messages = [{"role": "user", "content": "ping"}]
-        try:
-            self.client.chat.completions.create(
-                model=self.model_name,
-                messages=test_messages,
-                max_tokens=8,
-                temperature=0,
+        if self.client:
+            test_messages = [{"role": "user", "content": "ping"}]
+            try:
+                self.client.chat.completions.create(
+                    model=self.model_name,
+                    messages=test_messages,
+                    max_tokens=8,
+                    temperature=0,
+                )
+            except Exception as e:
+                raise ValueError(f"vLLM API test failed: {e}")
+            return
+
+        registry = self._ensure_registry()
+        available = registry.list_keys()
+        if self._engine_key not in available:
+            raise ValueError(
+                f"Remote vLLM engine '{self._engine_key}' not found. "
+                f"Registered engines: {available}"
             )
-        except Exception as e:
-            raise ValueError(f"vLLM API test failed: {e}")
+        self.logger.info("Connected to vLLM registry; engine '%s' is available", self._engine_key)
 
     def infer(
         self,
@@ -800,6 +927,11 @@ class VLLMClient(BaseLLMClient):
         max_retries: int = 5,
         retry_delay: int = 5,
     ) -> Optional[str]:
+        if not self.client:
+            raise ValueError(
+                "vLLM server URL not provided; batch inference is available via infer_batch()."
+            )
+            
         if custom_format is not None:
             self.logger.warning("vLLM does not support custom format, ignoring")
 
@@ -831,3 +963,65 @@ class VLLMClient(BaseLLMClient):
 
         self.logger.error("Max retries exceeded for vLLM request")
         return None
+
+    @staticmethod
+    def _messages_to_prompt(messages: List[Dict[str, str]]) -> str:
+        segments: List[str] = []
+        for message in messages:
+            content = message.get("content", "")
+            role = message.get("role")
+            if role and role not in {"user", "assistant"}:
+                segments.append(f"{role}: {content}")
+            else:
+                segments.append(content)
+        prompt = "\n".join(segment for segment in segments if segment)
+        return prompt.strip()
+
+    def infer_batch(
+        self,
+        messages_batch: List[List[Dict[str, str]]],
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+        return_json: bool,
+        custom_formats: Optional[List[Any]] = None,
+        json_schema: Optional[Dict[str, Any]] = None,
+        max_retries: int = 5,
+        retry_delay: int = 5,
+    ) -> List[Optional[str]]:
+        if custom_formats and any(cf is not None for cf in custom_formats):
+            self.logger.warning(
+                "vLLM batch inference does not support custom formats; ignoring."
+            )
+
+        prompts = [self._messages_to_prompt(messages) for messages in messages_batch]
+
+        if self.client:
+            results: List[Optional[str]] = []
+            for messages in messages_batch:
+                results.append(
+                    self.infer(
+                        messages,
+                        temperature,
+                        max_tokens,
+                        return_json,
+                        custom_format=None,
+                        max_retries=max_retries,
+                        retry_delay=retry_delay,
+                    )
+                )
+            return results
+
+        engine = self._ensure_engine()
+        sampling_kwargs = {
+            "temperature": temperature,
+            "max_tokens": max_tokens,
+        }
+        try:
+            return engine.generate(
+                prompts,
+                sampling_kwargs=sampling_kwargs,
+                return_json=return_json,
+                json_schema=json_schema,
+            )
+        except Exception as exc:  # noqa: BLE001
+            raise RuntimeError(f"Remote vLLM batch inference failed: {exc}") from exc

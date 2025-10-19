@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import json
 from datetime import datetime
-from typing import Any, Callable, Dict, List, Optional
+from typing import Any, Callable, Dict, List, Optional, Tuple, Union
 
 from .base_tool import BaseTool
 from .tool_registry import register_tool
@@ -23,7 +23,7 @@ API_KEY_ENV_VARS = {
     "CHATGPT": ["AZURE_OPENAI_API_KEY", "AZURE_OPENAI_ENDPOINT"],
     "OPENROUTER": ["OPENROUTER_API_KEY"],
     "GEMINI": ["GEMINI_API_KEY"],
-    "VLLM": ["VLLM_SERVER_URL"],
+    "VLLM": [],  # VLLM_SERVER_URL is optional; not required for batch inference
 }
 
 
@@ -35,21 +35,12 @@ class AgenticTool(BaseTool):
 
     @staticmethod
     def has_any_api_keys() -> bool:
-        """
-        Check if any API keys are available across all supported API types.
+        """Return True when at least one API type has all required keys set."""
 
-        Returns:
-            bool: True if at least one API type has all required keys, False otherwise
-        """
-        for _api_type, required_vars in API_KEY_ENV_VARS.items():
-            all_keys_present = True
-            for var in required_vars:
-                if not os.getenv(var):
-                    all_keys_present = False
-                    break
-            if all_keys_present:
-                return True
-        return False
+        return any(
+            all(os.getenv(var) for var in required_vars)
+            for required_vars in API_KEY_ENV_VARS.values()
+        )
 
     def __init__(self, tool_config: Dict[str, Any]):
         super().__init__(tool_config)
@@ -82,8 +73,30 @@ class AgenticTool(BaseTool):
         self._api_type: str = get_config("api_type", "CHATGPT")
         self._model_id: str = get_config("model_id", "o1-mini")
         self._temperature: Optional[float] = get_config("temperature", 0.1)
-        # Ignore configured max_new_tokens; client will resolve per model/env
-        self._max_new_tokens: Optional[int] = None
+        # Get max_new_tokens from config; if None, client will resolve per model/env
+        self._max_new_tokens: Optional[int] = get_config("max_new_tokens", None)
+        if self._max_new_tokens is not None:
+            try:
+                self._max_new_tokens = int(self._max_new_tokens)
+            except (TypeError, ValueError):
+                self.logger.warning(
+                    "Invalid max_new_tokens value '%s' for tool '%s'; defaulting to None.",
+                    self._max_new_tokens,
+                    self.name,
+                )
+                self._max_new_tokens = None
+        raw_vllm_args = get_config("vllm_specific_args", None)
+        if raw_vllm_args is None:
+            self._vllm_specific_args: Dict[str, Any] = {}
+        elif isinstance(raw_vllm_args, dict):
+            self._vllm_specific_args = raw_vllm_args.copy()
+        else:
+            self.logger.warning(
+                "Ignoring vllm_specific_args for tool '%s'; expected dict but got %s.",
+                self.name,
+                type(raw_vllm_args).__name__,
+            )
+            self._vllm_specific_args = {}
         self._return_json: bool = get_config("return_json", False)
         self._max_retries: int = get_config("max_retries", 5)
         self._retry_delay: int = get_config("retry_delay", 5)
@@ -105,6 +118,9 @@ class AgenticTool(BaseTool):
             "gemini_model_id",
             __import__("os").getenv("GEMINI_MODEL_ID", "gemini-2.0-flash"),
         )
+        
+        # Extract output_schema for structured outputs (used with vLLM)
+        self._output_schema: Optional[Dict[str, Any]] = tool_config.get("output_schema")
 
         # Validation
         if not self._prompt_template:
@@ -161,46 +177,56 @@ class AgenticTool(BaseTool):
 
     def _try_initialize_api(self):
         """Try to initialize the primary API, fallback to secondary if configured."""
-        # Try primary API first
-        if self._try_api(self._api_type, self._model_id):
-            return
+        for index, (api_type, model_id, reason) in enumerate(self._iter_api_candidates()):
+            if index == 0:
+                self.logger.debug(
+                    "Initializing primary API for %s: %s (%s)",
+                    self.name,
+                    api_type,
+                    model_id,
+                )
+            else:
+                self.logger.info(
+                    "Attempting %s for %s: %s (%s)",
+                    reason,
+                    self.name,
+                    api_type,
+                    model_id,
+                )
 
-        # Try explicit fallback API if configured
-        if self._fallback_api_type and self._fallback_model_id:
-            self.logger.info(
-                f"Primary API {self._api_type} failed, trying explicit fallback {self._fallback_api_type}"
-            )
-            if self._try_api(self._fallback_api_type, self._fallback_model_id):
+            if self._try_api(api_type, model_id):
                 return
 
-        # Try global fallback chain if enabled
-        if self._use_global_fallback:
-            self.logger.info(
-                f"Primary API {self._api_type} failed, trying global fallback chain"
-            )
-            for fallback_config in self._global_fallback_chain:
-                fallback_api = fallback_config["api_type"]
-                fallback_model = fallback_config["model_id"]
-
-                # Skip if it's the same as primary or explicit fallback
-                if (
-                    fallback_api == self._api_type and fallback_model == self._model_id
-                ) or (
-                    fallback_api == self._fallback_api_type
-                    and fallback_model == self._fallback_model_id
-                ):
-                    continue
-
-                self.logger.info(
-                    f"Trying global fallback: {fallback_api} ({fallback_model})"
-                )
-                if self._try_api(fallback_api, fallback_model):
-                    return
-
-        # If we get here, all APIs failed
         self.logger.warning(
-            f"Tool '{self.name}' failed to initialize with all available APIs"
+            "Tool '%s' failed to initialize with all available APIs",
+            self.name,
         )
+
+    def _iter_api_candidates(self) -> List[Tuple[str, str, str]]:
+        """Yield API/model choices in preference order with a short reason."""
+
+        candidates: List[Tuple[str, str, str]] = [(self._api_type, self._model_id, "primary")]
+        seen = {(self._api_type, self._model_id)}
+
+        if self._fallback_api_type and self._fallback_model_id:
+            fallback = (self._fallback_api_type, self._fallback_model_id)
+            if fallback not in seen:
+                candidates.append((*fallback, "explicit fallback"))
+                seen.add(fallback)
+
+        if self._use_global_fallback:
+            for index, fallback in enumerate(self._global_fallback_chain, start=1):
+                api_type = fallback.get("api_type")
+                model_id = fallback.get("model_id")
+                if not api_type or not model_id:
+                    continue
+                candidate_key = (api_type, model_id)
+                if candidate_key in seen:
+                    continue
+                candidates.append((api_type, model_id, f"global fallback #{index}"))
+                seen.add(candidate_key)
+
+        return candidates
 
     def _try_api(
         self, api_type: str, model_id: str, server_url: Optional[str] = None
@@ -214,11 +240,21 @@ class AgenticTool(BaseTool):
             elif api_type == "GEMINI":
                 self._llm_client = GeminiClient(model_id, self.logger)
             elif api_type == "VLLM":
-                if not server_url:
-                    server_url = os.getenv("VLLM_SERVER_URL")
-                if not server_url:
-                    raise ValueError("VLLM_SERVER_URL environment variable not set")
-                self._llm_client = VLLMClient(model_id, server_url, self.logger)
+                # Server URL is optional - only needed for API-based inference, not batch
+                server_url = os.getenv("VLLM_SERVER_URL")
+                if (
+                    self._max_new_tokens is not None
+                    and isinstance(self._vllm_specific_args, dict)
+                    and "max_model_len" not in self._vllm_specific_args
+                ):
+                    # Ensure remote engine requests mirror per-tool token cap when possible.
+                    self._vllm_specific_args["max_model_len"] = self._max_new_tokens
+                self._llm_client = VLLMClient(
+                    model_id,
+                    server_url,
+                    self.logger,
+                    self._vllm_specific_args,
+                )
             else:
                 raise ValueError(f"Unsupported API type: {api_type}")
 
@@ -260,18 +296,31 @@ class AgenticTool(BaseTool):
         if self._max_new_tokens is not None and self._max_new_tokens <= 0:
             raise ValueError("max_new_tokens must be positive or None")
 
+    def _model_metadata(self) -> Dict[str, Any]:
+        info: Dict[str, Any] = {
+            "api_type": self._api_type,
+            "model_id": self._model_id,
+            "temperature": self._temperature,
+            "max_new_tokens": self._max_new_tokens,
+        }
+        if self._api_type == "VLLM" and self._vllm_specific_args:
+            info["vllm_specific_args"] = self._vllm_specific_args
+        return info
+
     # ------------------------------------------------------------------ public API --------------
     def run(
         self,
-        arguments: Dict[str, Any],
+        arguments: Union[Dict[str, Any], List[Dict[str, Any]]],
         stream_callback: Optional[Callable[[str], None]] = None,
     ) -> Dict[str, Any]:
         start_time = datetime.now()
 
-        # Work on a copy so we can remove control flags without mutating caller data
-        arguments = dict(arguments or {})
-        stream_flag = bool(arguments.pop("_tooluniverse_stream", False))
-        streaming_requested = stream_flag or stream_callback is not None
+        # Batch execution path: accept list of argument dictionaries
+        if isinstance(arguments, list):
+            return self._run_batch(arguments, stream_callback, start_time)
+
+        raw_arguments = dict(arguments or {})
+        basic_snapshot = {arg: raw_arguments.get(arg) for arg in self._input_arguments}
 
         # Check if tool is available before attempting to run
         if not self._is_available:
@@ -284,9 +333,7 @@ class AgenticTool(BaseTool):
                     "error_type": "ToolUnavailable",
                     "metadata": {
                         "prompt_used": "Tool unavailable",
-                        "input_arguments": {
-                            arg: arguments.get(arg) for arg in self._input_arguments
-                        },
+                        "input_arguments": basic_snapshot,
                         "model_info": {
                             "api_type": self._api_type,
                             "model_id": self._model_id,
@@ -298,27 +345,15 @@ class AgenticTool(BaseTool):
             else:
                 return f"error: {error_msg} error_type: ToolUnavailable"
 
+        prepared_input = self._prepare_single_input(raw_arguments)
+        stream_flag = prepared_input["stream_flag"]
+        streaming_requested = stream_flag or stream_callback is not None
+        messages = prepared_input["messages"]
+        custom_format = prepared_input["custom_format"]
+        formatted_prompt = prepared_input["formatted_prompt"]
+        input_snapshot = prepared_input["input_snapshot"]
+
         try:
-            # Validate required args
-            missing_required_args = [
-                arg for arg in self._required_arguments if arg not in arguments
-            ]
-            if missing_required_args:
-                raise ValueError(
-                    f"Missing required input arguments: {missing_required_args}"
-                )
-
-            # Fill defaults for optional args
-            for arg in self._input_arguments:
-                if arg not in arguments:
-                    arguments[arg] = self._argument_defaults.get(arg, "")
-
-            self._validate_arguments(arguments)
-            formatted_prompt = self._format_prompt(arguments)
-
-            messages = [{"role": "user", "content": formatted_prompt}]
-            custom_format = arguments.get("response_format", None)
-
             # Delegate to client; client handles provider-specific logic
             response = None
 
@@ -332,7 +367,7 @@ class AgenticTool(BaseTool):
                     stream_iter = self._llm_client.infer_stream(
                         messages=messages,
                         temperature=self._temperature,
-                        max_tokens=None,
+                        max_tokens=self._max_new_tokens,
                         return_json=self._return_json,
                         custom_format=custom_format,
                         max_retries=self._max_retries,
@@ -355,7 +390,7 @@ class AgenticTool(BaseTool):
                 response = self._llm_client.infer(
                     messages=messages,
                     temperature=self._temperature,
-                    max_tokens=None,  # client resolves per-model defaults/env
+                    max_tokens=self._max_new_tokens,
                     return_json=self._return_json,
                     custom_format=custom_format,
                     max_retries=self._max_retries,
@@ -379,15 +414,8 @@ class AgenticTool(BaseTool):
                             if len(formatted_prompt) < 1000
                             else f"{formatted_prompt[:1000]}..."
                         ),
-                        "input_arguments": {
-                            arg: arguments.get(arg) for arg in self._input_arguments
-                        },
-                        "model_info": {
-                            "api_type": self._api_type,
-                            "model_id": self._model_id,
-                            "temperature": self._temperature,
-                            "max_new_tokens": self._max_new_tokens,
-                        },
+                        "input_arguments": input_snapshot,
+                        "model_info": self._model_metadata(),
                         "execution_time_seconds": execution_time,
                         "timestamp": start_time.isoformat(),
                     },
@@ -411,14 +439,9 @@ class AgenticTool(BaseTool):
                             else "Failed to format prompt"
                         ),
                         "input_arguments": {
-                            arg: arguments.get(arg) for arg in self._input_arguments
+                            arg: input_snapshot.get(arg) for arg in self._input_arguments
                         },
-                        "model_info": {
-                            "api_type": self._api_type,
-                            "model_id": self._model_id,
-                            "temperature": self._temperature,
-                            "max_new_tokens": self._max_new_tokens,
-                        },
+                        "model_info": self._model_metadata(),
                         "execution_time_seconds": execution_time,
                         "timestamp": start_time.isoformat(),
                     },
@@ -436,14 +459,9 @@ class AgenticTool(BaseTool):
                             else "Failed to format prompt"
                         ),
                         "input_arguments": {
-                            arg: arguments.get(arg) for arg in self._input_arguments
+                            arg: input_snapshot.get(arg) for arg in self._input_arguments
                         },
-                        "model_info": {
-                            "api_type": self._api_type,
-                            "model_id": self._model_id,
-                            "temperature": self._temperature,
-                            "max_new_tokens": self._max_new_tokens,
-                        },
+                        "model_info": self._model_metadata(),
                         "execution_time_seconds": execution_time,
                     },
                 )
@@ -466,6 +484,184 @@ class AgenticTool(BaseTool):
             # Streaming callbacks should not break tool execution; log and continue
             self.logger.debug(
                 f"Stream callback for tool '{self.name}' raised an exception: {callback_error}"
+            )
+
+    def _prepare_single_input(self, raw_arguments: Dict[str, Any]) -> Dict[str, Any]:
+        arguments = dict(raw_arguments or {})
+        stream_flag = bool(arguments.pop(self.STREAM_FLAG_KEY, False))
+
+        missing_required_args = [
+            arg for arg in self._required_arguments if arg not in arguments
+        ]
+        if missing_required_args:
+            raise ValueError(
+                f"Missing required input arguments: {missing_required_args}"
+            )
+
+        for arg in self._input_arguments:
+            if arg not in arguments:
+                arguments[arg] = self._argument_defaults.get(arg, "")
+
+        self._validate_arguments(arguments)
+        formatted_prompt = self._format_prompt(arguments)
+        messages = [{"role": "user", "content": formatted_prompt}]
+
+        input_snapshot = {arg: arguments.get(arg) for arg in self._input_arguments}
+
+        return {
+            "arguments": arguments,
+            "stream_flag": stream_flag,
+            "messages": messages,
+            "custom_format": arguments.get("response_format"),
+            "formatted_prompt": formatted_prompt,
+            "input_snapshot": input_snapshot,
+        }
+
+    def _run_batch(
+        self,
+        batch_arguments: List[Dict[str, Any]],
+        stream_callback: Optional[Callable[[str], None]],
+        start_time: datetime,
+    ) -> Dict[str, Any]:
+        if stream_callback is not None:
+            raise ValueError("Streaming callbacks are not supported for batch inference")
+        if not isinstance(batch_arguments, list):
+            raise ValueError("Batch arguments must be provided as a list of dictionaries")
+
+        raw_arguments_list: List[Dict[str, Any]] = []
+        for idx, item in enumerate(batch_arguments):
+            if not isinstance(item, dict):
+                raise ValueError(f"Batch input at index {idx} must be a dictionary")
+            raw_arguments_list.append(dict(item))
+
+        basic_snapshots = [
+            {arg: raw.get(arg) for arg in self._input_arguments}
+            for raw in raw_arguments_list
+        ]
+
+        if not self._is_available:
+            error_msg = (
+                f"Tool '{self.name}' is not available due to initialization error:"
+                f" {self._initialization_error}"
+            )
+            self.logger.error(error_msg)
+            if self.return_metadata:
+                return {
+                    "success": False,
+                    "error": error_msg,
+                    "error_type": "ToolUnavailable",
+                    "metadata": {
+                        "prompt_used": "Tool unavailable",
+                        "input_arguments": basic_snapshots,
+                        "model_info": {
+                            "api_type": self._api_type,
+                            "model_id": self._model_id,
+                        },
+                        "batch_size": len(raw_arguments_list),
+                        "execution_time_seconds": 0,
+                        "timestamp": start_time.isoformat(),
+                    },
+                }
+            return f"error: {error_msg} error_type: ToolUnavailable"
+
+        prepared_items = [
+            self._prepare_single_input(raw_arguments) for raw_arguments in raw_arguments_list
+        ]
+
+        if any(item["stream_flag"] for item in prepared_items):
+            raise ValueError("Streaming flags are not supported in batch mode")
+
+        messages_batch = [item["messages"] for item in prepared_items]
+        custom_formats = [item["custom_format"] for item in prepared_items]
+        custom_formats_param = (
+            custom_formats if any(cf is not None for cf in custom_formats) else None
+        )
+
+        try:
+            responses = self._llm_client.infer_batch(
+                messages_batch=messages_batch,
+                temperature=self._temperature,
+                max_tokens=self._max_new_tokens,
+                return_json=self._return_json,
+                custom_formats=custom_formats_param,
+                json_schema=self._output_schema,
+                max_retries=self._max_retries,
+                retry_delay=self._retry_delay,
+            )
+
+            end_time = datetime.now()
+            execution_time = (end_time - start_time).total_seconds()
+
+            if self.return_metadata:
+                items_metadata = []
+                for idx, item in enumerate(prepared_items):
+                    prompt_preview = item["formatted_prompt"]
+                    if len(prompt_preview) >= 1000:
+                        prompt_preview = f"{prompt_preview[:1000]}..."
+                    items_metadata.append(
+                        {
+                            "index": idx,
+                            "prompt_used": prompt_preview,
+                            "input_arguments": item["input_snapshot"],
+                        }
+                    )
+
+                return {
+                    "success": True,
+                    "result": responses,
+                    "metadata": {
+                        "items": items_metadata,
+                        "batch_size": len(prepared_items),
+                        "model_info": self._model_metadata(),
+                        "execution_time_seconds": execution_time,
+                        "timestamp": start_time.isoformat(),
+                    },
+                }
+
+            return responses
+
+        except Exception as e:  # noqa: BLE001
+            end_time = datetime.now()
+            execution_time = (end_time - start_time).total_seconds()
+            self.logger.error(f"Batch execution error for {self.name}: {str(e)}")
+            prompt_previews = []
+            for item in prepared_items:
+                prompt_text = item["formatted_prompt"]
+                if len(prompt_text) >= 1000:
+                    prompt_text = f"{prompt_text[:1000]}..."
+                prompt_previews.append(prompt_text)
+
+            if self.return_metadata:
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                    "metadata": {
+                        "prompt_used": prompt_previews,
+                        "input_arguments": [
+                            item["input_snapshot"] for item in prepared_items
+                        ],
+                        "model_info": self._model_metadata(),
+                        "batch_size": len(prepared_items),
+                        "execution_time_seconds": execution_time,
+                        "timestamp": start_time.isoformat(),
+                    },
+                }
+
+            from .utils import format_error_response
+
+            return format_error_response(
+                e,
+                self.name,
+                {
+                    "prompt_used": prompt_previews,
+                    "input_arguments": [
+                        item["input_snapshot"] for item in prepared_items
+                    ],
+                    "model_info": self._model_metadata(),
+                    "batch_size": len(prepared_items),
+                    "execution_time_seconds": execution_time,
+                },
             )
 
     # ------------------------------------------------------------------ helpers -----------------
@@ -507,25 +703,25 @@ class AgenticTool(BaseTool):
             return f"Error formatting prompt: {str(e)}"
 
     def get_model_info(self) -> Dict[str, Any]:
-        return {
-            "api_type": self._api_type,
-            "model_id": self._model_id,
-            "temperature": self._temperature,
-            "max_new_tokens": self._max_new_tokens,
-            "return_json": self._return_json,
-            "max_retries": self._max_retries,
-            "retry_delay": self._retry_delay,
-            "validate_api_key": self._validate_api_key,
-            "gemini_model_id": getattr(self, "_gemini_model_id", None),
-            "is_available": self._is_available,
-            "initialization_error": self._initialization_error,
-            "current_api_type": self._current_api_type,
-            "current_model_id": self._current_model_id,
-            "fallback_api_type": self._fallback_api_type,
-            "fallback_model_id": self._fallback_model_id,
-            "use_global_fallback": self._use_global_fallback,
-            "global_fallback_chain": self._global_fallback_chain,
-        }
+        info = self._model_metadata()
+        info.update(
+            {
+                "return_json": self._return_json,
+                "max_retries": self._max_retries,
+                "retry_delay": self._retry_delay,
+                "validate_api_key": self._validate_api_key,
+                "gemini_model_id": getattr(self, "_gemini_model_id", None),
+                "is_available": self._is_available,
+                "initialization_error": self._initialization_error,
+                "current_api_type": self._current_api_type,
+                "current_model_id": self._current_model_id,
+                "fallback_api_type": self._fallback_api_type,
+                "fallback_model_id": self._fallback_model_id,
+                "use_global_fallback": self._use_global_fallback,
+                "global_fallback_chain": self._global_fallback_chain,
+            }
+        )
+        return info
 
     def is_available(self) -> bool:
         """Check if the tool is available for use."""
@@ -550,10 +746,21 @@ class AgenticTool(BaseTool):
             elif self._api_type == "GEMINI":
                 self._llm_client = GeminiClient(self._gemini_model_id, self.logger)
             elif self._api_type == "VLLM":
+                # Server URL is optional - only needed for API-based inference, not batch
                 server_url = os.getenv("VLLM_SERVER_URL")
-                if not server_url:
-                    raise ValueError("VLLM_SERVER_URL environment variable not set")
-                self._llm_client = VLLMClient(self._model_id, server_url, self.logger)
+                if (
+                    self._max_new_tokens is not None
+                    and isinstance(self._vllm_specific_args, dict)
+                    and "max_model_len" not in self._vllm_specific_args
+                ):
+                    # Ensure remote engine requests mirror per-tool token cap when possible.
+                    self._vllm_specific_args["max_model_len"] = self._max_new_tokens
+                self._llm_client = VLLMClient(
+                    self._model_id,
+                    server_url,
+                    self.logger,
+                    self._vllm_specific_args,
+                )
             else:
                 raise ValueError(f"Unsupported API type: {self._api_type}")
 
