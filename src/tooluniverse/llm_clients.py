@@ -310,9 +310,14 @@ class AzureOpenAIClient(BaseLLMClient):
                                 raise last_exc
                         else:
                             raise be
-                if custom_format is not None:
-                    return resp.choices[0].message.parsed.model_dump()
-                return resp.choices[0].message.content
+                # Extract content and token usage
+                content = resp.choices[0].message.parsed.model_dump() if custom_format is not None else resp.choices[0].message.content
+                usage = getattr(resp, 'usage', None)
+                return {
+                    'response_content': content,
+                    'input_tokens': getattr(usage, 'prompt_tokens', 0) if usage else 0,
+                    'output_tokens': getattr(usage, 'completion_tokens', 0) if usage else 0
+                }
             except self._openai.RateLimitError:  # type: ignore[attr-defined]
                 self.logger.warning(
                     f"Rate limit exceeded. Retrying in {retry_delay} seconds..."
@@ -821,7 +826,12 @@ class VLLMClient(BaseLLMClient):
                     kwargs["response_format"] = {"type": "json_object"}
 
                 resp = self.client.chat.completions.create(**kwargs)
-                return resp.choices[0].message.content
+                usage = getattr(resp, 'usage', None)
+                return {
+                    'response_content': resp.choices[0].message.content,
+                    'input_tokens': getattr(usage, 'prompt_tokens', 0) if usage else 0,
+                    'output_tokens': getattr(usage, 'completion_tokens', 0) if usage else 0
+                }
 
             except Exception as e:
                 self.logger.error(f"vLLM error: {e}")

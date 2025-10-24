@@ -326,6 +326,11 @@ class AgenticTool(BaseTool):
                 streaming_requested and not self._return_json and custom_format is None
             )
 
+            # Initialize token counters
+            input_tokens = 0
+            output_tokens = 0
+            response_content = None
+            
             if streaming_permitted and hasattr(self._llm_client, "infer_stream"):
                 try:
                     chunks_collected: List[str] = []
@@ -345,13 +350,14 @@ class AgenticTool(BaseTool):
                         self._emit_stream_chunk(chunk, stream_callback)
                     if chunks_collected:
                         response = "".join(chunks_collected)
+                        response_content = response
                 except Exception as stream_error:  # noqa: BLE001
                     self.logger.warning(
                         f"Streaming failed for tool '{self.name}': {stream_error}. Falling back to buffered response."
                     )
                     response = None
 
-            if response is None:
+            if response is None or response_content is None:
                 response = self._llm_client.infer(
                     messages=messages,
                     temperature=self._temperature,
@@ -361,18 +367,25 @@ class AgenticTool(BaseTool):
                     max_retries=self._max_retries,
                     retry_delay=self._retry_delay,
                 )
-
-                if streaming_requested and response:
-                    for chunk in self._iter_chunks(response):
+                # Handle dict response with token info
+                if isinstance(response, dict) and 'response_content' in response:
+                    input_tokens = response.get('input_tokens', 0)
+                    output_tokens = response.get('output_tokens', 0)
+                    response_content = response['response_content']
+                else:
+                    response_content = response
+                
+                if streaming_requested and response_content:
+                    for chunk in self._iter_chunks(response_content):
                         self._emit_stream_chunk(chunk, stream_callback)
-
             end_time = datetime.now()
             execution_time = (end_time - start_time).total_seconds()
-
             if self.return_metadata:
                 return {
                     "success": True,
-                    "result": response,
+                    "result": response_content,
+                    "input_tokens": input_tokens,
+                    "output_tokens": output_tokens,
                     "metadata": {
                         "prompt_used": (
                             formatted_prompt
@@ -390,10 +403,12 @@ class AgenticTool(BaseTool):
                         },
                         "execution_time_seconds": execution_time,
                         "timestamp": start_time.isoformat(),
+                        "input_tokens": input_tokens,
+                        "output_tokens": output_tokens,
                     },
                 }
             else:
-                return response
+                return response_content
 
         except Exception as e:  # noqa: BLE001
             end_time = datetime.now()
