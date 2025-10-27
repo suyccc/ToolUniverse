@@ -1,5 +1,5 @@
 """
-直接演示 PythonScriptRunner 依赖管理功能
+直接演示 python_script_runner 依赖管理功能
 """
 
 import tempfile
@@ -34,7 +34,7 @@ print("包导入成功")
         
         # 运行脚本
         result = client.run_one_function({
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": script_path,
                 "dependencies": ["nonexistent_package_12345"],

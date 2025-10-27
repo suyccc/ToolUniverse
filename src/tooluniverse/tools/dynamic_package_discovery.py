@@ -1,5 +1,5 @@
 """
-DynamicPackageDiscovery
+dynamic_package_discovery
 
 Dynamically searches PyPI and evaluates packages based on requirements
 """
@@ -8,7 +8,7 @@ from typing import Any, Optional, Callable
 from ._shared_client import get_shared_client
 
 
-def DynamicPackageDiscovery(
+def dynamic_package_discovery(
     requirements: str,
     functionality: Optional[str] = None,
     constraints: Optional[dict[str, Any]] = None,
@@ -43,7 +43,7 @@ def DynamicPackageDiscovery(
 
     return get_shared_client().run_one_function(
         {
-            "name": "DynamicPackageDiscovery",
+            "name": "dynamic_package_discovery",
             "arguments": {
                 "requirements": requirements,
                 "functionality": functionality,
@@ -56,4 +56,4 @@ def DynamicPackageDiscovery(
     )
 
 
-__all__ = ["DynamicPackageDiscovery"]
+__all__ = ["dynamic_package_discovery"]

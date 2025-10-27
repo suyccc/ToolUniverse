@@ -28,7 +28,7 @@ def quick_example():
     # 2. Simple calculation
     print("\n2. Executing simple calculation...")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "result = 10 + 20 * 3",
             "timeout": 10
@@ -41,7 +41,7 @@ def quick_example():
     # 3. Use variables
     print("\n3. Using passed variables...")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "result = a + b * c",
             "arguments": {"a": 5, "b": 3, "c": 4},
@@ -55,7 +55,7 @@ def quick_example():
     # 4. Use math module
     print("\n4. Using math module...")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "import math\nresult = math.sqrt(144) + math.pi",
             "timeout": 10
@@ -68,7 +68,7 @@ def quick_example():
     # 5. Data processing
     print("\n5. Data processing example...")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": """
 numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -89,7 +89,7 @@ result = {
     # 6. Security test
     print("\n6. Security restriction test...")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "import os",
             "timeout": 10

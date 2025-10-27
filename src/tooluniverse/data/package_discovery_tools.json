@@ -1,7 +1,7 @@
 [
   {
     "type": "DynamicPackageDiscovery",
-    "name": "DynamicPackageDiscovery",
+    "name": "dynamic_package_discovery",
     "description": "Dynamically searches PyPI and evaluates packages based on requirements",
     "parameter": {
       "type": "object",

@@ -2,15 +2,15 @@
 """
 Python Executor Tools Example
 
-This example demonstrates how to use the PythonCodeExecutor and PythonScriptRunner tools
+This example demonstrates how to use the python_code_executor and python_script_runner tools
 from ToolUniverse for safe Python code execution.
 
 Features demonstrated:
-1. Basic code execution with PythonCodeExecutor
+1. Basic code execution with python_code_executor
 2. Code execution with variable passing
 3. Using allowed modules (math, json, etc.)
 4. Error handling and security restrictions
-5. Script file execution with PythonScriptRunner
+5. Script file execution with python_script_runner
 """
 
 import os
@@ -62,15 +62,15 @@ if __name__ == "__main__":
 
 
 def demonstrate_code_executor(tu):
-    """Demonstrate PythonCodeExecutor functionality."""
+    """Demonstrate python_code_executor functionality."""
     print("=" * 60)
-    print("PythonCodeExecutor Examples")
+    print("python_code_executor Examples")
     print("=" * 60)
     
     # Example 1: Basic arithmetic
     print("\n1. Basic arithmetic calculation:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "result = sum([1, 2, 3, 4, 5])",
             "timeout": 10
@@ -81,7 +81,7 @@ def demonstrate_code_executor(tu):
     # Example 2: Using variables
     print("\n2. Calculation with variables:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "result = x ** 2 + y ** 2",
             "arguments": {"x": 3, "y": 4},
@@ -93,7 +93,7 @@ def demonstrate_code_executor(tu):
     # Example 3: Using allowed modules
     print("\n3. Using math module:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "import math\nresult = math.sqrt(16) + math.pi",
             "timeout": 10
@@ -104,7 +104,7 @@ def demonstrate_code_executor(tu):
     # Example 4: JSON processing
     print("\n4. JSON data processing:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": '''
 import json
@@ -119,7 +119,7 @@ result = json.dumps(data, indent=2)
     # Example 5: List comprehension and filtering
     print("\n5. List comprehension and filtering:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": '''
 numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
@@ -134,7 +134,7 @@ result = {"even_squares": even_squares, "count": len(even_squares)}
     # Example 6: Error handling (forbidden operation)
     print("\n6. Security restriction example (trying to use 'open'):")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "result = open('test.txt', 'w')",
             "timeout": 10
@@ -145,7 +145,7 @@ result = {"even_squares": even_squares, "count": len(even_squares)}
     # Example 7: Timeout example
     print("\n7. Timeout example (infinite loop):")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "while True: pass",
             "timeout": 2
@@ -155,9 +155,9 @@ result = {"even_squares": even_squares, "count": len(even_squares)}
 
 
 def demonstrate_script_runner(tu):
-    """Demonstrate PythonScriptRunner functionality."""
+    """Demonstrate python_script_runner functionality."""
     print("\n" + "=" * 60)
-    print("PythonScriptRunner Examples")
+    print("python_script_runner Examples")
     print("=" * 60)
     
     # Create test script
@@ -168,7 +168,7 @@ def demonstrate_script_runner(tu):
         # Example 1: Basic script execution
         print("\n1. Basic script execution:")
         result = tu.run({
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": script_path,
                 "timeout": 30
@@ -179,7 +179,7 @@ def demonstrate_script_runner(tu):
         # Example 2: Script with arguments
         print("\n2. Script with command-line arguments:")
         result = tu.run({
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": script_path,
                 "script_args": ["--input", "data.csv", "--output", "result.csv"],
@@ -191,7 +191,7 @@ def demonstrate_script_runner(tu):
         # Example 3: Script with environment variables
         print("\n3. Script with environment variables:")
         result = tu.run({
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": script_path,
                 "env_vars": {"DEBUG": "true", "LOG_LEVEL": "info"},
@@ -203,7 +203,7 @@ def demonstrate_script_runner(tu):
         # Example 4: Non-existent script (error handling)
         print("\n4. Error handling (non-existent script):")
         result = tu.run({
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": "/nonexistent/script.py",
                 "timeout": 30
@@ -227,7 +227,7 @@ def demonstrate_advanced_features(tu):
     # Example 1: Custom return variable name
     print("\n1. Custom return variable name:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "my_result = 42 * 2",
             "return_variable": "my_result",
@@ -239,7 +239,7 @@ def demonstrate_advanced_features(tu):
     # Example 2: Complex data structures
     print("\n2. Complex data structures:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": '''
 import json
@@ -263,7 +263,7 @@ result = json.dumps(data, indent=2)
     # Example 3: Mathematical calculations
     print("\n3. Mathematical calculations:")
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": '''
 import math
@@ -295,13 +295,13 @@ def main():
     
     # Check if our tools are loaded
     available_tools = [tool.get('name', '') for tool in tu.all_tools]
-    if 'PythonCodeExecutor' not in available_tools:
-        print("ERROR: PythonCodeExecutor not found in loaded tools!")
+    if 'python_code_executor' not in available_tools:
+        print("ERROR: python_code_executor not found in loaded tools!")
         print(f"Available tools: {available_tools}")
         return
     
-    if 'PythonScriptRunner' not in available_tools:
-        print("ERROR: PythonScriptRunner not found in loaded tools!")
+    if 'python_script_runner' not in available_tools:
+        print("ERROR: python_script_runner not found in loaded tools!")
         print(f"Available tools: {available_tools}")
         return
     

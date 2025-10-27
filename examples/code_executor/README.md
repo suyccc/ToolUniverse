@@ -8,7 +8,7 @@ The Python Code Executor Tools provide secure execution of Python code snippets 
 
 ## Tools
 
-### 1. PythonCodeExecutor
+### 1. python_code_executor
 Executes Python code snippets safely in a sandboxed environment.
 
 **Features:**
@@ -21,7 +21,7 @@ Executes Python code snippets safely in a sandboxed environment.
 **Example:**
 ```python
 result = tu.run({
-    "name": "PythonCodeExecutor",
+    "name": "python_code_executor",
     "arguments": {
         "code": "result = 10 + 20 * 3",
         "timeout": 10
@@ -29,7 +29,7 @@ result = tu.run({
 })
 ```
 
-### 2. PythonScriptRunner
+### 2. python_script_runner
 Runs Python script files in an isolated subprocess with enhanced dependency management.
 
 **Features:**
@@ -45,7 +45,7 @@ Runs Python script files in an isolated subprocess with enhanced dependency mana
 **Basic Example:**
 ```python
 result = tu.run({
-    "name": "PythonScriptRunner",
+    "name": "python_script_runner",
     "arguments": {
         "script_path": "my_script.py",
         "script_args": ["--input", "data.csv"],
@@ -57,7 +57,7 @@ result = tu.run({
 **Dependency Management Example:**
 ```python
 result = tu.run({
-    "name": "PythonScriptRunner",
+    "name": "python_script_runner",
     "arguments": {
         "script_path": "my_script.py",
         "dependencies": ["requests", "pandas"],
@@ -125,7 +125,7 @@ The simple demo shows:
 
 ## Configuration
 
-### PythonCodeExecutor Parameters
+### python_code_executor Parameters
 - `timeout`: Execution timeout in seconds (default: 30)
 - `memory_limit_mb`: Memory limit in MB (default: 512)
 - `arguments`: Variables to pass to the execution environment
@@ -133,7 +133,7 @@ The simple demo shows:
 - `return_variable`: Variable name to extract as result (default: "result")
 - `allowed_imports`: Additional allowed modules beyond the default set
 
-### PythonScriptRunner Parameters
+### python_script_runner Parameters
 - `script_path`: Path to Python script file (.py) to execute
 - `script_args`: Command-line arguments to pass to the script
 - `timeout`: Execution timeout in seconds (default: 60)

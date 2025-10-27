@@ -1,7 +1,7 @@
 """
 简单的依赖管理演示
 
-这个例子演示 PythonScriptRunner 的依赖管理功能：
+这个例子演示 python_script_runner 的依赖管理功能：
 1. 运行一个需要缺失包的脚本
 2. 系统检测到缺失的包
 3. 提示用户是否安装
@@ -23,7 +23,7 @@ from tooluniverse import ToolUniverse
 def main():
     """简单的依赖管理演示"""
     print("=" * 60)
-    print("PythonScriptRunner 依赖管理演示")
+    print("python_script_runner 依赖管理演示")
     print("=" * 60)
     
     # 初始化 ToolUniverse
@@ -57,7 +57,7 @@ print(f"结果: {result}")
         print(f"\n🔍 运行脚本并检查依赖...")
         
         result = client.run_one_function({
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": script_path,
                 "dependencies": ["keggtools.api"],  # 指定需要的子模块

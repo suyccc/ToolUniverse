@@ -1,7 +1,7 @@
 """
 ToolUniverse Tools
 
-Type-safe Python interface to 706 scientific tools.
+Type-safe Python interface to 713 scientific tools.
 Each tool is in its own module for minimal import overhead.
 
 Usage:
@@ -67,7 +67,7 @@ from .DomainExpertValidator import DomainExpertValidator
 from .DrugInteractionAnalyzerAgent import DrugInteractionAnalyzerAgent
 from .DrugOptimizationAgent import DrugOptimizationAgent
 from .DrugSafetyAnalyzer import DrugSafetyAnalyzer
-from .DynamicPackageDiscovery import DynamicPackageDiscovery
+from .dynamic_package_discovery import dynamic_package_discovery
 from .EMDB_get_structure import EMDB_get_structure
 from .EthicalComplianceReviewer import EthicalComplianceReviewer
 from .EuropePMC_Guidelines_Search import EuropePMC_Guidelines_Search
@@ -698,8 +698,8 @@ from .PubMed_search_articles import PubMed_search_articles
 from .PubTator3_EntityAutocomplete import PubTator3_EntityAutocomplete
 from .PubTator3_LiteratureSearch import PubTator3_LiteratureSearch
 from .PyPIPackageInspector import PyPIPackageInspector
-from .PythonCodeExecutor import PythonCodeExecutor
-from .PythonScriptRunner import PythonScriptRunner
+from .python_code_executor import python_code_executor
+from .python_script_runner import python_script_runner
 from .QuestionRephraser import QuestionRephraser
 from .ReMap_get_transcription_factor_binding import (
     ReMap_get_transcription_factor_binding,
@@ -1123,6 +1123,13 @@ from .odphp_itemlist import odphp_itemlist
 from .odphp_myhealthfinder import odphp_myhealthfinder
 from .odphp_outlink_fetch import odphp_outlink_fetch
 from .odphp_topicsearch import odphp_topicsearch
+from .ols_find_similar_terms import ols_find_similar_terms
+from .ols_get_ontology_info import ols_get_ontology_info
+from .ols_get_term_ancestors import ols_get_term_ancestors
+from .ols_get_term_children import ols_get_term_children
+from .ols_get_term_info import ols_get_term_info
+from .ols_search_ontologies import ols_search_ontologies
+from .ols_search_terms import ols_search_terms
 from .openalex_literature_search import openalex_literature_search
 from .reactome_disease_target_score import reactome_disease_target_score
 from .search_clinical_trials import search_clinical_trials
@@ -1175,7 +1182,7 @@ __all__ = [
     "DrugInteractionAnalyzerAgent",
     "DrugOptimizationAgent",
     "DrugSafetyAnalyzer",
-    "DynamicPackageDiscovery",
+    "dynamic_package_discovery",
     "EMDB_get_structure",
     "EthicalComplianceReviewer",
     "EuropePMC_Guidelines_Search",
@@ -1478,8 +1485,8 @@ __all__ = [
     "PubTator3_EntityAutocomplete",
     "PubTator3_LiteratureSearch",
     "PyPIPackageInspector",
-    "PythonCodeExecutor",
-    "PythonScriptRunner",
+    "python_code_executor",
+    "python_script_runner",
     "QuestionRephraser",
     "ReMap_get_transcription_factor_binding",
     "Reactome_get_pathway_reactions",
@@ -1833,6 +1840,13 @@ __all__ = [
     "odphp_myhealthfinder",
     "odphp_outlink_fetch",
     "odphp_topicsearch",
+    "ols_find_similar_terms",
+    "ols_get_ontology_info",
+    "ols_get_term_ancestors",
+    "ols_get_term_children",
+    "ols_get_term_info",
+    "ols_search_ontologies",
+    "ols_search_terms",
     "openalex_literature_search",
     "reactome_disease_target_score",
     "search_clinical_trials",

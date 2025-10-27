@@ -27,7 +27,7 @@ def basic_code_execution():
 
     # Simple arithmetic
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "result = 2 + 2 * 3",
             "timeout": 10
@@ -51,7 +51,7 @@ def variable_passing():
 
     # Use passed variables
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "result = x ** 2 + y ** 2",
             "arguments": {"x": 3, "y": 4},
@@ -76,7 +76,7 @@ def math_module_usage():
 
     # Use math module
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": """
 import math
@@ -107,7 +107,7 @@ def json_processing():
 
     # JSON data processing
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": """
 import json
@@ -142,7 +142,7 @@ def list_comprehension():
 
     # Complex data processing
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": """
 numbers = list(range(1, 21))
@@ -178,7 +178,7 @@ def security_test():
 
     # Try to execute forbidden operations
     result = tu.run({
-        "name": "PythonCodeExecutor",
+        "name": "python_code_executor",
         "arguments": {
             "code": "import os\nresult = os.listdir('.')",
             "timeout": 10
@@ -226,7 +226,7 @@ print(f"Data: {json.dumps(data, indent=2)}")
 
         # Run script
         result = tu.run({
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": str(test_script),
                 "script_args": ["--input", "data.csv",

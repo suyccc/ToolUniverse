@@ -147,7 +147,7 @@ def _discover_packages_dynamically(tool_description, call_tool):
 
     # Step 0: Use Dynamic_Package_Search tool for intelligent package discovery
     try:
-        dynamic_result = call_tool("DynamicPackageDiscovery", {
+        dynamic_result = call_tool("dynamic_package_discovery", {
             "requirements": tool_description,
             "functionality": "API access and data processing",
             "constraints": {"python_version": ">=3.8"}
@@ -605,7 +605,7 @@ def _validate_test_cases(test_cases, tool_config):
 
 def _execute_code_safely_with_executor(code_file, tool_name, test_arguments, call_tool):
     """
-    使用 PythonCodeExecutor 安全执行生成的工具代码
+    使用 python_code_executor 安全执行生成的工具代码
 
     Args:
         code_file: 生成的代码文件路径
@@ -625,7 +625,7 @@ def _execute_code_safely_with_executor(code_file, tool_name, test_arguments, cal
             "execution_time_ms": int
         }
     """
-    print("   🔐 Executing code via PythonCodeExecutor...")
+    print("   🔐 Executing code via python_code_executor...")
 
     # 验证文件存在
     if not os.path.exists(code_file):
@@ -666,9 +666,9 @@ test_args = {test_arguments}
 result = tool_instance.run(test_args)
 """
 
-    # 调用 PythonCodeExecutor
+    # 调用 python_code_executor
     try:
-        execution_result = call_tool("PythonCodeExecutor", {
+        execution_result = call_tool("python_code_executor", {
             "code": test_code,
             "arguments": {},
             "timeout": 30,
@@ -738,14 +738,14 @@ def _execute_test_cases_with_template(execution_context, call_tool):
         print(f"❌ Execution template not found: {execution_file}")
         return test_results
 
-    # Execute using PythonScriptRunner tool
+    # Execute using python_script_runner tool
     try:
         import json
 
-        # Use PythonScriptRunner to execute the file
+        # Use python_script_runner to execute the file
         working_dir = os.path.dirname(execution_file) if execution_file else "."
 
-        execution_result = call_tool("PythonScriptRunner", {
+        execution_result = call_tool("python_script_runner", {
             "script_path": execution_file,
             "timeout": 120,
             "working_directory": working_dir
@@ -874,7 +874,7 @@ def _check_and_install_dependencies(
             # Extract base package name for import test
             base_name = dep.split('.')[0].split('>=')[0].split('==')[0].split('<')[0].replace('-', '_')
             try:
-                result = call_tool("PythonCodeExecutor", {
+                result = call_tool("python_code_executor", {
                     "code": f"import {base_name}",
                     "timeout": 3
                 })

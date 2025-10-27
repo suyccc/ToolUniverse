@@ -428,6 +428,22 @@ For more sophisticated error handling, override the `handle_error()` method:
 Troubleshooting
 ===============
 
+Naming Conflicts (Failed to initialize tool for validation)
+------------------------------------------------------------
+
+**Problem**: Getting "Failed to initialize tool for validation" error
+
+**Cause**: Wrapper function name matches the class name
+
+**Solution**: Use different names
+.. code-block:: python
+
+   # Wrapper function must use snake_case
+   def my_tool(...):  # ✅ Good
+   def MyTool(...):  # ❌ Bad if class is also called MyTool
+
+**Convention**: Class names use PascalCase, wrapper functions use snake_case.
+
 Tool not found
 ---------------
 

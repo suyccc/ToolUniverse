@@ -2,8 +2,8 @@
 Python Code Execution Tools for ToolUniverse
 
 This module provides two specialized tools for executing Python code:
-1. PythonCodeExecutor - Execute Python code snippets safely in sandboxed environment
-2. PythonScriptRunner - Run Python script files in isolated subprocess
+1. python_code_executor - Execute Python code snippets safely in sandboxed environment
+2. python_script_runner - Run Python script files in isolated subprocess
 """
 
 import ast

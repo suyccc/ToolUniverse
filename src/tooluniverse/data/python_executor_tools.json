@@ -1,7 +1,7 @@
 [
   {
     "type": "PythonCodeExecutor",
-    "name": "PythonCodeExecutor",
+    "name": "python_code_executor",
     "description": "Execute Python code snippets safely in sandboxed environment with timeout and resource limits. Supports variable passing and result extraction.",
     "parameter": {
       "type": "object",
@@ -174,7 +174,7 @@
   },
   {
     "type": "PythonScriptRunner",
-    "name": "PythonScriptRunner",
+    "name": "python_script_runner",
     "description": "Run Python script files in isolated subprocess with resource limits and timeout. Supports command-line arguments and environment variables.",
     "parameter": {
       "type": "object",

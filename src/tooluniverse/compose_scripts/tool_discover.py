@@ -168,7 +168,7 @@ def _discover_packages_dynamically(tool_description, call_tool):
     # Step 0: Use Dynamic_Package_Search tool for intelligent package discovery
     try:
         dynamic_result = call_tool(
-            "DynamicPackageDiscovery",
+            "dynamic_package_discovery",
             {
                 "requirements": tool_description,
                 "functionality": "API access and data processing",
@@ -893,7 +893,7 @@ def _validate_test_cases(test_cases, tool_config):
 
 def _execute_code_safely_with_executor(code_file, tool_name, test_arguments, call_tool):
     """
-    使用 PythonCodeExecutor 安全执行生成的工具代码
+    使用 python_code_executor 安全执行生成的工具代码
 
     Args:
         code_file: 生成的代码文件路径
@@ -913,7 +913,7 @@ def _execute_code_safely_with_executor(code_file, tool_name, test_arguments, cal
             "execution_time_ms": int
         }
     """
-    print("   🔐 Executing code via PythonCodeExecutor...")
+    print("   🔐 Executing code via python_code_executor...")
 
     # 验证文件存在
     if not os.path.exists(code_file):
@@ -954,10 +954,10 @@ test_args = {test_arguments}
 result = tool_instance.run(test_args)
 """
 
-    # 调用 PythonCodeExecutor
+    # 调用 python_code_executor
     try:
         execution_result = call_tool(
-            "PythonCodeExecutor",
+            "python_code_executor",
             {
                 "code": test_code,
                 "arguments": {},
@@ -1043,15 +1043,16 @@ def _execute_test_cases_with_template(execution_context, call_tool):
         print(f"❌ Execution template not found: {execution_file}")
         return test_results
 
-    # Execute using PythonScriptRunner tool
+    # Execute using python_script_runner tool
     try:
         import json
 
-        # Use PythonScriptRunner to execute the file
+        # Use python_script_runner to execute the file
         working_dir = os.path.dirname(execution_file) if execution_file else "."
 
+        # Call python_script_runner without validation parameter (default validate=True)
         execution_result = call_tool(
-            "PythonScriptRunner",
+            "python_script_runner",
             {
                 "script_path": execution_file,
                 "timeout": 120,
@@ -1120,7 +1121,7 @@ def _evaluate_quality(
     detailed=True,
     temp_dir=None,
 ):
-    """评估代码质量 - 使用增强的CodeQualityAnalyzer + 实际测试执行"""
+    """评估代码质量 - 基于测试执行结果计算分数"""
 
     # 如果已提供测试结果，直接使用；否则执行测试
     if test_execution_results is None:
@@ -1148,56 +1149,55 @@ def _evaluate_quality(
     else:
         print("   ♻️ Using pre-executed test results")
 
-    # 提取实现代码
+    # Extract implementation code for analysis
     implementation_code = ""
     if "implementation" in tool_config:
         impl = tool_config["implementation"]
         implementation_code = impl["source_code"]
 
-    # Build analysis input - truncate long data to avoid token overflow
-    # Summarize test results instead of sending full details
-    test_summary = {}
-    if test_execution_results:
-        test_details = test_execution_results.get("test_details", [])
-        # Only include summaries, not full results
-        passed_count = 0
-        failed_count = 0
-        error_types = []
-        for test in test_details[:5]:  # Only analyze first 5 tests
-            output = test.get("output", {})
-            result = output.get("result", {})
-            if isinstance(result, dict) and "error" not in result:
-                passed_count += 1
-            else:
-                failed_count += 1
-                if isinstance(result, dict):
-                    error_type = result.get("error_details", {}).get("type", "Unknown")
-                    error_types.append(error_type)
+    # Extract test details for score calculation
+    parsed_data = {"test_execution": test_execution_results}
 
-        test_summary = {
-            "total_tests": len(test_details),
-            "passed_count": passed_count,
-            "failed_count": failed_count,
-            "error_types": list(set(error_types[:3])),  # Unique error types
+    # Calculate overall score based on test execution results
+    if test_execution_results and "test_details" in test_execution_results:
+        test_details = test_execution_results.get("test_details", [])
+        total_tests = len(test_details)
+        passed_tests = sum(
+            1
+            for t in test_details
+            if t.get("output", {}).get("result", {}).get("error") is None
+        )
+
+        if total_tests > 0:
+            parsed_data["overall_score"] = (passed_tests / total_tests) * 10
+            print(
+                f"   📊 Score: {parsed_data['overall_score']:.2f}/10 ({passed_tests}/{total_tests})"
+            )
+        else:
+            parsed_data["overall_score"] = 0.0
+    else:
+        parsed_data["overall_score"] = 5.0
+
+    # Try to enrich with CodeQualityAnalyzer analysis (optional, can fail)
+    try:
+        eval_input = {
+            "tool_name": tool_config.get("name", "UnknownTool"),
+            "tool_description": tool_config.get("description", "")[:200],
+            "tool_parameters": json.dumps(tool_config.get("parameter", {})),
+            "implementation_code": implementation_code[:2000],
+            "test_cases": json.dumps(test_cases[:2] if test_cases else []),
+            "test_execution_results": json.dumps(
+                {
+                    "total": test_execution_results.get("total_tests", 0),
+                    "passed": (
+                        passed_tests if "test_details" in test_execution_results else 0
+                    ),
+                }
+            ),
         }
 
-    eval_input = {
-        "tool_name": tool_config.get("name", "UnknownTool"),
-        "tool_description": tool_config.get("description", "")[
-            :500
-        ],  # Truncate description
-        "tool_parameters": json.dumps(tool_config.get("parameter", {})),
-        "implementation_code": implementation_code[:5000],  # Truncate code
-        "test_cases": json.dumps(
-            test_cases[:3] if test_cases else []
-        ),  # Only first 3 tests
-        "test_execution_results": json.dumps(test_summary),
-    }
-
-    try:
         result = call_tool("CodeQualityAnalyzer", eval_input)
 
-        # Handle both AgenticTool format (success/result) and standard format (status/data)
         if isinstance(result, dict):
             if result.get("success"):
                 result_data = result.get("result", "{}")
@@ -1208,35 +1208,13 @@ def _evaluate_quality(
         else:
             result_data = "{}"
 
-        parsed_data = _parse_result(result_data)
+        quality_data = _parse_result(result_data)
+        if quality_data and "overall_score" in quality_data:
+            # Use CodeQualityAnalyzer score if available
+            parsed_data["overall_score"] = quality_data["overall_score"]
+            parsed_data["quality_analysis"] = quality_data
     except Exception as e:
-        print(f"❌ CodeQualityAnalyzer failed: {e}")
-        parsed_data = {}
-
-    # Ensure parsed_data is a dict
-    if not isinstance(parsed_data, dict):
-        parsed_data = {}
-
-    # Add test execution results summary (not full results to avoid context overflow)
-    if test_execution_results:
-        # Only pass summary, not full test details to avoid token overflow
-        parsed_data["test_execution_summary"] = {
-            "total_tests": test_execution_results.get("total_tests", 0),
-            "test_details_count": len(test_execution_results.get("test_details", [])),
-        }
-
-    # Ensure overall_score exists (fallback if CodeQualityAnalyzer failed)
-    if "overall_score" not in parsed_data:
-        # Calculate a simple score based on test results
-        if test_execution_results:
-            passed = test_execution_results.get("passed", 0)
-            total = test_execution_results.get("total", 1)
-            test_pass_rate = passed / total if total > 0 else 0
-            parsed_data["overall_score"] = test_pass_rate * 10  # Scale to 0-10
-        else:
-            parsed_data["overall_score"] = 5.0  # Default middling score
-
-        print(f"⚠️ Using fallback score: {parsed_data['overall_score']:.2f}/10")
+        print(f"   ⚠️ CodeQualityAnalyzer skipped: {e}")
 
     return parsed_data
 
@@ -1277,7 +1255,8 @@ def _check_and_install_dependencies(
             )
             try:
                 result = call_tool(
-                    "PythonCodeExecutor", {"code": f"import {base_name}", "timeout": 3}
+                    "python_code_executor",
+                    {"code": f"import {base_name}", "timeout": 3},
                 )
                 if result.get("success"):
                     installed_packages.add(dep)

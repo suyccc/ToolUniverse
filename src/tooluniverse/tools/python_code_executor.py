@@ -1,5 +1,5 @@
 """
-PythonCodeExecutor
+python_code_executor
 
 Execute Python code snippets safely in sandboxed environment with timeout and resource limits. Su...
 """
@@ -8,7 +8,7 @@ from typing import Any, Optional, Callable
 from ._shared_client import get_shared_client
 
 
-def PythonCodeExecutor(
+def python_code_executor(
     code: str,
     arguments: Optional[dict[str, Any]] = None,
     timeout: Optional[int] = 30,
@@ -58,7 +58,7 @@ def PythonCodeExecutor(
 
     return get_shared_client().run_one_function(
         {
-            "name": "PythonCodeExecutor",
+            "name": "python_code_executor",
             "arguments": {
                 "code": code,
                 "arguments": arguments,
@@ -76,4 +76,4 @@ def PythonCodeExecutor(
     )
 
 
-__all__ = ["PythonCodeExecutor"]
+__all__ = ["python_code_executor"]

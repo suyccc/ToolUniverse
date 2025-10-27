@@ -1,5 +1,5 @@
 """
-PythonScriptRunner
+python_script_runner
 
 Run Python script files in isolated subprocess with resource limits and timeout. Supports command...
 """
@@ -8,7 +8,7 @@ from typing import Any, Optional, Callable
 from ._shared_client import get_shared_client
 
 
-def PythonScriptRunner(
+def python_script_runner(
     script_path: str,
     script_args: Optional[list[Any]] = None,
     timeout: Optional[int] = 60,
@@ -58,7 +58,7 @@ def PythonScriptRunner(
 
     return get_shared_client().run_one_function(
         {
-            "name": "PythonScriptRunner",
+            "name": "python_script_runner",
             "arguments": {
                 "script_path": script_path,
                 "script_args": script_args,
@@ -76,4 +76,4 @@ def PythonScriptRunner(
     )
 
 
-__all__ = ["PythonScriptRunner"]
+__all__ = ["python_script_runner"]
