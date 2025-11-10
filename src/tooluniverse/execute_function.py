@@ -1992,10 +1992,25 @@ class ToolUniverse:
         if not function_name:
             return {"error": "Missing or empty function name"}
 
+        # Allow list arguments only for AgenticTool (batch mode)
+        allow_list_for_agentic = False
         if not isinstance(arguments, dict):
-            return {
-                "error": f"Arguments must be a dictionary, got {type(arguments).__name__}"
-            }
+            if isinstance(arguments, list):
+                tool_cfg = self.all_tool_dict.get(function_name, {})
+                if tool_cfg.get("type") == "AgenticTool":
+                    # self.logger.warning(
+                    #     "AgenticTool '%s' received list arguments; running in batch mode.",
+                    #     function_name,
+                    # )
+                    allow_list_for_agentic = True
+                else:
+                    return {
+                        "error": f"Arguments must be a dictionary, got {type(arguments).__name__}"
+                    }
+            else:
+                return {
+                    "error": f"Arguments must be a dictionary, got {type(arguments).__name__}"
+                }
 
         tool_instance = None
         cache_namespace = None
@@ -2043,20 +2058,21 @@ class ToolUniverse:
                     return cached_value
 
             # Validate parameters if requested
-            if validate:
+            if validate and not allow_list_for_agentic:
                 validation_error = self._validate_parameters(function_name, arguments)
                 if validation_error:
                     return self._create_dual_format_error(validation_error)
 
             # Check function call format (existing validation)
-            check_status, check_message = self.check_function_call(function_call_json)
-            if check_status is False:
-                error_msg = "Invalid function call: " + check_message
-                return self._create_dual_format_error(
-                    ToolValidationError(
-                        error_msg, details={"check_message": check_message}
+            if not allow_list_for_agentic:
+                check_status, check_message = self.check_function_call(function_call_json)
+                if check_status is False:
+                    error_msg = "Invalid function call: " + check_message
+                    return self._create_dual_format_error(
+                        ToolValidationError(
+                            error_msg, details={"check_message": check_message}
+                        )
                     )
-                )
 
             # Execute the tool
             tool_arguments = arguments

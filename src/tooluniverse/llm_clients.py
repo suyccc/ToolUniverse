@@ -1,6 +1,5 @@
 from __future__ import annotations
 from typing import Any, Dict, List, Optional, Tuple
-import atexit
 import os
 import time
 import json as _json
@@ -9,8 +8,6 @@ try:
     from vllm.sampling_params import StructuredOutputsParams
 except ImportError:
     StructuredOutputsParams = None
-
-from . import vllm_proxy
 
 
 class BaseLLMClient:
@@ -804,7 +801,7 @@ class VLLMClient(BaseLLMClient):
         self.model_name = model_name
         self.server_url = server_url
         self.logger = logger
-        self._cleanup_registered = False
+        self._local_engine = None
 
         if specific_args is None:
             self._vllm_specific_args: Dict[str, Any] = {}
@@ -818,108 +815,37 @@ class VLLMClient(BaseLLMClient):
             )
             self._vllm_specific_args = {}
 
-        # Only initialize OpenAI client if server_url is provided (for API-based inference)
-        if server_url:
+        # Prefer local engine if vllm_specific_args is provided (ignore server_url)
+        prefer_local = isinstance(self._vllm_specific_args, dict) and len(self._vllm_specific_args) > 0
+        if prefer_local:
+            self.logger.debug("vLLM specific_args detected; ignoring server_url and using local engine.")
+            self.client = None
+            engine_id = self._vllm_specific_args.get("engine_id") if isinstance(self._vllm_specific_args, dict) else None
+            engine_kwargs = _normalize_vllm_engine_kwargs(self._vllm_specific_args)
+            self._engine_key = _build_vllm_engine_key(self.model_name, engine_kwargs, engine_id)
+            engine = _LOCAL_VLLM_ENGINES.get(self._engine_key)
+            if engine is None:
+                engine = _LocalVLLMEngine(self.model_name, engine_kwargs, self.logger)
+                _LOCAL_VLLM_ENGINES[self._engine_key] = engine
+                print(f"[VLLM] Started local engine: {self._engine_key}")
+            else:
+                print(f"[VLLM] Reusing local engine: {self._engine_key}")
+            self._local_engine = engine
+        elif server_url:
+            # Server (OpenAI-compatible) mode
             try:
                 from openai import OpenAI
             except Exception as e:
                 raise RuntimeError("openai package not available for vLLM client") from e
 
-            # Ensure server_url ends with /v1 for OpenAI-compatible API
             if not server_url.endswith("/v1"):
                 server_url = server_url.rstrip("/") + "/v1"
             self.server_url = server_url
 
-            self.client = OpenAI(
-                api_key="EMPTY",
-                base_url=self.server_url,
-            )
-            if self._vllm_specific_args:
-                self.logger.debug(
-                    "vLLM client configured for server mode; ensure remote server honours %s",
-                    self._vllm_specific_args,
-                )
-        else:
-            self.client = None
-            registry_address, registry_authkey = self._resolve_registry_settings()
-            self._registry_settings = (registry_address, registry_authkey)
-            self._registry_proxy = None
-            self._engine_proxy = None
-            reserved_keys = {"engine_id", "registry_address", "registry_authkey"}
-            engine_kwargs_for_key = {
-                key: value
-                for key, value in self._vllm_specific_args.items()
-                if key not in reserved_keys
-            }
-            engine_id = self._vllm_specific_args.get("engine_id")
-            self._engine_key = vllm_proxy.make_engine_key(
-                engine_id, self.model_name, engine_kwargs_for_key
-            )
-            self._cleanup_registered = True
-            atexit.register(self._shutdown_on_exit)
+            self.client = OpenAI(api_key="EMPTY", base_url=self.server_url)
+        
 
-    def _resolve_registry_settings(self) -> Tuple[Any, Any]:
-        address = (
-            self._vllm_specific_args.get("registry_address")
-            or os.getenv("TOOLUNIVERSE_VLLM_MANAGER_ADDR")
-        )
-        if address is None:
-            raise ValueError(
-                "No vLLM registry address provided. Set 'registry_address' in "
-                "vllm_specific_args or TOOLUNIVERSE_VLLM_MANAGER_ADDR."
-            )
-        authkey = (
-            self._vllm_specific_args.get("registry_authkey")
-            or os.getenv("TOOLUNIVERSE_VLLM_MANAGER_AUTHKEY")
-            or "tooluniverse"
-        )
-        return address, authkey
-
-    def _ensure_registry(self):
-        if self.client:
-            return None
-        if self._registry_proxy is None:
-            address, authkey = self._registry_settings
-            self._registry_proxy = vllm_proxy.connect_registry(address, authkey)
-        return self._registry_proxy
-
-    def _ensure_engine(self):
-        if self.client:
-            return None
-        if self._engine_proxy is None:
-            registry = self._ensure_registry()
-            engine = registry.get_engine(self._engine_key)
-            if engine is None:
-                available = registry.list_keys()
-                raise ValueError(
-                    f"No remote vLLM engine registered under key '{self._engine_key}'. "
-                    f"Available engines: {available}"
-                )
-            self._engine_proxy = engine
-        return self._engine_proxy
-
-    def _shutdown_on_exit(self) -> None:
-        if self.client:
-            return
-
-        try:
-            registry = self._registry_proxy or self._ensure_registry()
-        except Exception:
-            return
-
-        try:
-            registry.shutdown_engine(self._engine_key)
-        except Exception as exc:  # pragma: no cover - best-effort cleanup
-            try:
-                self.logger.debug(
-                    "Failed to shut down remote vLLM engine '%s': %s",
-                    self._engine_key,
-                    exc,
-                )
-            except Exception:
-                pass
-        finally:
-            self._engine_proxy = None
+    # Removed external registry/proxy logic; local engines are cached in-process
 
     def test_api(self) -> None:
         if self.client:
@@ -935,14 +861,8 @@ class VLLMClient(BaseLLMClient):
                 raise ValueError(f"vLLM API test failed: {e}")
             return
 
-        registry = self._ensure_registry()
-        available = registry.list_keys()
-        if self._engine_key not in available:
-            raise ValueError(
-                f"Remote vLLM engine '{self._engine_key}' not found. "
-                f"Registered engines: {available}"
-            )
-        self.logger.info("Connected to vLLM registry; engine '%s' is available", self._engine_key)
+        if not self._local_engine:
+            raise ValueError("Local vLLM engine not initialized")
 
     def infer(
         self,
@@ -954,42 +874,44 @@ class VLLMClient(BaseLLMClient):
         max_retries: int = 5,
         retry_delay: int = 5,
     ) -> Optional[str]:
-        if not self.client:
-            raise ValueError(
-                "vLLM server URL not provided; batch inference is available via infer_batch()."
-            )
-            
         if custom_format is not None:
             self.logger.warning("vLLM does not support custom format, ignoring")
 
-        retries = 0
-        while retries < max_retries:
-            try:
-                kwargs: Dict[str, Any] = {
-                    "model": self.model_name,
-                    "messages": messages,
-                }
+        # Server mode
+        if self.client:
+            retries = 0
+            while retries < max_retries:
+                try:
+                    kwargs: Dict[str, Any] = {
+                        "model": self.model_name,
+                        "messages": messages,
+                    }
+                    if temperature is not None:
+                        kwargs["temperature"] = temperature
+                    if max_tokens is not None:
+                        kwargs["max_tokens"] = max_tokens
+                    if return_json:
+                        kwargs["response_format"] = {"type": "json_object"}
+                    resp = self.client.chat.completions.create(**kwargs)
+                    return resp.choices[0].message.content
+                except Exception as e:
+                    self.logger.error(f"vLLM error: {e}")
+                    retries += 1
+                    if retries < max_retries:
+                        time.sleep(retry_delay * retries)
+            self.logger.error("Max retries exceeded for vLLM request")
+            return None
 
-                if temperature is not None:
-                    kwargs["temperature"] = temperature
-
-                if max_tokens is not None:
-                    kwargs["max_tokens"] = max_tokens
-
-                if return_json:
-                    kwargs["response_format"] = {"type": "json_object"}
-
-                resp = self.client.chat.completions.create(**kwargs)
-                return resp.choices[0].message.content
-
-            except Exception as e:
-                self.logger.error(f"vLLM error: {e}")
-                retries += 1
-                if retries < max_retries:
-                    time.sleep(retry_delay * retries)
-
-        self.logger.error("Max retries exceeded for vLLM request")
-        return None
+        # Local mode
+        prompt = self._messages_to_prompt(messages)
+        results = self._local_engine.generate(
+            [prompt],
+            temperature=temperature,
+            max_tokens=max_tokens,
+            return_json=return_json,
+            json_schema=None,
+        )
+        return results[0] if results else None
 
     @staticmethod
     def _messages_to_prompt(messages: List[Dict[str, str]]) -> str:
@@ -1038,17 +960,105 @@ class VLLMClient(BaseLLMClient):
                 )
             return results
 
-        engine = self._ensure_engine()
-        sampling_kwargs = {
-            "temperature": temperature,
-            "max_tokens": max_tokens,
-        }
+        # Local mode single call
+        return self._local_engine.generate(
+            prompts,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            return_json=return_json,
+            json_schema=json_schema,
+        )
+
+
+# Minimal in-process vLLM engine cache (no external manager)
+_LOCAL_VLLM_ENGINES: Dict[str, Any] = {}
+
+def _normalize_vllm_engine_kwargs(engine_kwargs: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+    if not engine_kwargs:
+        return {}
+    # Drop our own bookkeeping keys not accepted by vLLM
+    normalized: Dict[str, Any] = {}
+    for key in sorted(engine_kwargs):
+        if key == "engine_id":
+            continue
+        value = engine_kwargs[key]
+        if key in {"max_model_len", "tensor_parallel_size"}:
+            try:
+                value = int(value)
+            except Exception:
+                continue
+            if key == "tensor_parallel_size" and value < 1:
+                value = 1
+        normalized[str(key)] = value
+    return normalized
+
+def _build_vllm_engine_key(model_name: str, engine_kwargs: Dict[str, Any], engine_id: Optional[str] = None) -> str:
+    # Reuse strictly by model name to maximize sharing; ignore engine_id/kwargs for keying
+    return str(model_name)
+
+
+class _LocalVLLMEngine:
+    def __init__(self, model_name: str, engine_kwargs: Optional[Dict[str, Any]], logger) -> None:
+        self.logger = logger
         try:
-            return engine.generate(
-                prompts,
-                sampling_kwargs=sampling_kwargs,
-                return_json=return_json,
-                json_schema=json_schema,
-            )
-        except Exception as exc:  # noqa: BLE001
-            raise RuntimeError(f"Remote vLLM batch inference failed: {exc}") from exc
+            from vllm import LLM  # type: ignore
+        except Exception as exc:
+            raise RuntimeError("The 'vllm' package is required for local VLLM mode") from exc
+        kwargs = _normalize_vllm_engine_kwargs(engine_kwargs)
+        self._llm = LLM(model=model_name, **kwargs)
+
+    @staticmethod
+    def _build_sampling_params(temperature: Optional[float], max_tokens: Optional[int]):
+        try:
+            from vllm import SamplingParams  # type: ignore
+        except Exception as exc:
+            raise RuntimeError("The 'vllm' package is required for local VLLM mode") from exc
+        params: Dict[str, Any] = {}
+        if temperature is not None:
+            params["temperature"] = temperature
+        if max_tokens is not None:
+            params["max_tokens"] = max_tokens
+        return SamplingParams(**params)
+
+    def generate(
+        self,
+        prompts: List[str],
+        *,
+        temperature: Optional[float],
+        max_tokens: Optional[int],
+        return_json: bool,
+        json_schema: Optional[Dict[str, Any]],
+    ) -> List[Optional[str]]:
+        sampling_params = self._build_sampling_params(temperature, max_tokens)
+        # Try structured outputs if requested and available
+        if return_json and json_schema and StructuredOutputsParams is not None:
+            try:
+                sampling_params.structured_outputs = StructuredOutputsParams(json=json_schema)  # type: ignore[attr-defined]
+            except Exception:
+                self.logger.warning("StructuredOutputsParams unavailable; continuing without schema.")
+
+        try:
+            outputs = self._llm.generate(prompts, sampling_params)
+        except Exception as exc:
+            raise RuntimeError(f"Local vLLM generation failed: {exc}") from exc
+        
+        results: List[Optional[str]] = []
+        for out in outputs:
+            text: Optional[str] = None
+            candidates = getattr(out, "outputs", None)
+            if candidates:
+                cand = candidates[0]
+                text = getattr(cand, "text", None)
+                if text is None and isinstance(cand, dict):
+                    text = cand.get("text")
+
+            if return_json and json_schema and StructuredOutputsParams is not None and text:
+                try:
+                    import json as _json_  # local guard
+                    _json_.loads(text)
+                    results.append(text)
+                except Exception:
+                    results.append(None)
+            else:
+                results.append(text)
+        return results

@@ -192,6 +192,7 @@ ComposeTool: Any
 CellosaurusSearchTool: Any
 CellosaurusQueryConverterTool: Any
 CellosaurusGetCellLineInfoTool: Any
+TextEmbeddingTool: Any
 if not _LIGHT_IMPORT and not LAZY_LOADING_ENABLED:
     # Import all tool classes immediately (old behavior) with warning suppression  # noqa: E501
     with warnings.catch_warnings():
@@ -264,7 +265,7 @@ if not _LIGHT_IMPORT and not LAZY_LOADING_ENABLED:
             GWASSNPsForGene,
             GWASAssociationsForStudy,
         )
-
+        from .text_embedding_tool import TextEmbeddingTool
     from .mcp_client_tool import MCPClientTool, MCPAutoLoaderTool
     from .admetai_tool import ADMETAITool
     from .alphafold_tool import AlphaFoldRESTTool
@@ -383,6 +384,7 @@ else:
     CellosaurusGetCellLineInfoTool = _LazyImportProxy(
         "cellosaurus_tool", "CellosaurusGetCellLineInfoTool"
     )
+    TextEmbeddingTool = _LazyImportProxy("text_embedding_tool", "TextEmbeddingTool")
     # Literature search tools
     ArXivTool = _LazyImportProxy("arxiv_tool", "ArXivTool")
     CrossrefTool = _LazyImportProxy("crossref_tool", "CrossrefTool")
@@ -461,6 +463,7 @@ __all__ = [
     "ADMETAITool",
     "default_tool_files",
     "EmbeddingDatabase",
+    "TextEmbeddingTool",
     "EmbeddingSync",
     "ToolFinderEmbedding",
     "AlphaFoldRESTTool",

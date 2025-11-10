@@ -137,6 +137,7 @@ default_tool_files = {
         current_dir, "data", "tool_composition_tools.json"
     ),
     "embedding": os.path.join(current_dir, "data", "embedding_tools.json"),
+    "text_embedding": os.path.join(current_dir, "data", "text_embedding_tools.json"),
     "gwas": os.path.join(current_dir, "data", "gwas_tools.json"),
     "admetai": os.path.join(current_dir, "data", "admetai_tools.json"),
     # duplicate key removed
